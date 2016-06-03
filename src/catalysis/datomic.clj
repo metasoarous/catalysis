@@ -52,7 +52,7 @@
 (defn bootstrap
   [db]
   (let [eids (map (fn [[e a v t]] e) (d/datoms db :eavt))]
-    (d/pull-many db '[*] eids)))
+    (d/pull-many db '[*] (distinct eids))))
 
 
 
