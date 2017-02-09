@@ -1,12 +1,10 @@
 (ns dat.sys.client.views
   "# Views"
   (:require [dat.view]
-            [dat.view.styles :as styles]
             [posh.reagent :as posh]
             [taoensso.timbre :as log :include-macros true]
             [reagent.core :as r]
             [re-com.core :as re-com]
-            [clojure.spec :as s]
             [datascript.core :as d]
             [dat.sys.shared.utils :as utils :refer [cat-into]]
             [dat.sys.client.onyx :as onyx]))
@@ -25,8 +23,6 @@
 ;; These descriptions are stored as metadata on DataScript query data structures.
 
 ;; The simplest of examples:
-
-;; CHOP (defonce ^:export cat-into cutils/cat-into)
 
 (def time-entry
   [:db/id :e/name :time.entry/start-time :time.entry/stop-time :e/description])
@@ -168,11 +164,10 @@
   ["/" {"" :route/todos
         "todo/" {"" :route/todos}}])
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ## Main
+;;
 ;;
 ;; This is the main view function, which you plug into the Datview component
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 (defn main [app]
   (let [app (assoc app
               :routes routing-table
