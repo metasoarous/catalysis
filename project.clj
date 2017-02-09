@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha7"]
-                 [org.clojure/clojurescript "1.9.76"]
+                 [org.clojure/clojurescript "1.9.456"]
                  [org.clojure/core.async "0.2.382"]
 ;;                  [org.clojure/tools.logging "0.3.1"] ;; Should remove this for timbre
                  [org.clojure/core.match "0.3.0-alpha4"]
@@ -29,14 +29,15 @@
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [testdouble/clojurescript.csv "0.2.0"]
                  [datascript "0.15.0"]
-                 [posh "0.5.3.3"]
+                 [posh "0.5.5"]
+                 [org.onyxplatform/onyx-local-rt "0.9.15.5"]
                  [data-frisk-reagent "0.2.5"]
                  [reagent "0.6.0-rc"]
                  [org.webjars/bootstrap "3.3.5"]
                  [re-com "0.8.3"]
                  [prismatic/schema "1.1.3"]
                  [io.rkn/conformity "0.4.0"]
-                 [ch.qos.logback/logback-classic "1.1.7"]
+;;                  [ch.qos.logback/logback-classic "1.1.7"]
                  [com.taoensso/timbre "4.7.0"]
                  [com.taoensso/encore "2.68.1"]
                  [com.taoensso/sente "1.8.1" :exclusions [org.clojure/tools.reader]]
@@ -122,14 +123,14 @@
   :profiles {:dev-config {}
              :dev [:dev-config
                    {:dependencies [[alembic "0.3.2"]
-                                   [figwheel "0.5.5-SNAPSHOT"]
-                                   [figwheel-sidecar "0.5.5-SNAPSHOT"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript fipp.visit/boolean?]
+                                   [figwheel "0.5.8"]
+                                   [figwheel-sidecar "0.5.8"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript fipp.visit/boolean?]
 
                                    [com.cemerick/piggieback "0.2.1"]
                                    [org.clojure/tools.nrepl "0.2.12"]
                                    [devcards "0.2.1"]]
                     :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
-                    :plugins [[lein-figwheel "0.5.5-SNAPSHOT"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript org.codehaus.plexus/plexus-utils]
+                    :plugins [[lein-figwheel "0.5.8"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript org.codehaus.plexus/plexus-utils]
 
                               [com.palletops/lein-shorthand "0.4.0"]
                               [lein-environ "1.0.1"]]
