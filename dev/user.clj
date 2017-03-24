@@ -54,8 +54,9 @@
 ;; You can use this to add dependencies without rebooting your repl.
 (defmacro add-dependency [dependency]
   "A macro for adding a dependency via Pomegranate.
-   Usage: (add-dependency [incanter \"1.2.3\"])"
-  `(do (~'use '[cemerick.pomegranate :only (~'add-dependencies)])
-       (~'add-dependencies :coordinates '[~dependency]
+   Usage: (add-dependency [cheshire \"5.7.0\"])
+   Remember that you still need to (require) or (use) the new namespaces."
+  `(do (~'require '[cemerick.pomegranate])
+       (~'cemerick.pomegranate/add-dependencies :coordinates '[~dependency]
          :repositories (~'merge cemerick.pomegranate.aether/maven-central
                          {"clojars" "http://clojars.org/repo"}))))

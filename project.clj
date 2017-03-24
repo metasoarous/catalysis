@@ -124,7 +124,7 @@
                    {:dependencies [[alembic "0.3.2"]
                                    [figwheel "0.5.5-SNAPSHOT"]
                                    [figwheel-sidecar "0.5.5-SNAPSHOT"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript fipp.visit/boolean?]
-
+                                   [com.cemerick/pomegranate "0.3.1"]
                                    [com.cemerick/piggieback "0.2.1"]
                                    [org.clojure/tools.nrepl "0.2.12"]
                                    [devcards "0.2.1"]]
