@@ -8,7 +8,7 @@
     [clojure.tools.namespace.repl :refer [refresh refresh-all]]
     [dat.sys.system :as system]
     [taoensso.timbre :as log :include-macros true]
-    [dat.sys.dev.figwheel-server :as fserver]))
+    [dat.sys.figwheel-server :as fserver]))
 
 (def system nil)
 

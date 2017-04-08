@@ -1,10 +1,10 @@
-(ns dat.sys.shared.routes
+(ns dat.sys.routes
   (:require [taoensso.timbre :as log :include-macros true]
             [com.stuartsierra.component :as component]
             [bidi.bidi :as bidi]
 
-            #?(:clj [compojure.core :refer [routes GET POST]])
-            ))
+            #?(:clj [compojure.core :refer [routes GET POST]])))
+
 
 (defn test-routes []
   #?(:clj

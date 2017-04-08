@@ -1,13 +1,14 @@
-(ns dat.sys.client.app
+(ns dat.sys.app
   (:require-macros [cljs.core.async.macros :refer [go-loop]]
                    [reagent.ratom :refer [reaction]])
   (:require [dat.view]
             [dat.reactor :as reactor]
             [dat.remote]
             [dat.remote.impl.sente :as sente]
+            ;; TODO Chacge over to new ns
             [dat.sync.client :as dat.sync]
-            [dat.sys.client.views :as views]
-            [dat.sys.client.events]
+            [dat.sys.views :as views]
+            [dat.sys.events]
             [dat.reactor.dispatcher :as dispatcher]
             [datascript.core :as d]
             [taoensso.timbre :as log :include-macros true]
@@ -97,3 +98,6 @@
   (log/info "Running main function")
   (when-let [root (.getElementById js/document "app")]
     (r/render-component [views/main (:app system)] root)))
+
+
+(main)

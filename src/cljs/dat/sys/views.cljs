@@ -1,4 +1,4 @@
-(ns dat.sys.client.views
+(ns dat.sys.views
   "# Views"
   (:require [dat.view]
             [posh.reagent :as posh]
