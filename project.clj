@@ -4,10 +4,10 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.0.0"
-  :dependencies [[org.clojure/clojure "1.9.0-alpha7"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/tools.reader "1.0.0-beta3"]
                  [org.clojure/clojurescript "1.9.293"]
-                 [org.clojure/core.async "0.2.395"]
+                 [org.clojure/core.async "0.3.442"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  ;[org.clojure/core.typed "0.3.28"] ;; WARNING: 0.3.28 breaks piggieback(!); 0.3.23 known-safe
                  ;; Datsys things
@@ -47,7 +47,7 @@
                  [org.clojure/tools.analyzer "0.6.9"]
                  [medley "0.8.4"]]
 
-  :plugins [[lein-cljsbuild "1.1.1" :exclusions [org.clojure/clojure]]]
+  :plugins [[lein-cljsbuild "1.1.5" :exclusions [org.clojure/clojure]]]
   ;; For Datomic Pro uncomment the following and set the DATOMIC_USERNAME and DATAOMIC_PASSWORD environment
   ;; variables of the process in which you run this program to those matching your Datomic Pro account. You'll
   ;; have to start your own transactor separately from this process as well. More instructions on how to do
