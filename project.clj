@@ -6,7 +6,7 @@
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
                  [org.clojure/tools.reader "1.0.0-beta3"]
-                 [org.clojure/clojurescript "1.9.293"]
+                 [org.clojure/clojurescript "1.9.518"]
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  ;[org.clojure/core.typed "0.3.28"] ;; WARNING: 0.3.28 breaks piggieback(!); 0.3.23 known-safe
@@ -123,7 +123,7 @@
                     :cljsbuild {:builds {:client {:source-paths ["dev/cljs" "dev/cljc"]
                                                   :figwheel {:on-jsload "dat.sys.start/on-js-reload"}}}}
                     :plugins [[lein-figwheel "0.5.8"] ;;:exclusions [org.clojure/clojure org.clojure/clojurescript org.codehaus.plexus/plexus-utils]
-                              [com.palletops/lein-shorthand "0.4.0"]
+                              ;[com.palletops/lein-shorthand "0.4.0"]
                               [lein-environ "1.0.1"]]
                     ;; The lein-shorthand plugin gives us access to the following shortcuts as `./*` (e.g. `./pprint`)
                     :shorthand {. [clojure.pprint/pprint
