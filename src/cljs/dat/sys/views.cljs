@@ -3,6 +3,7 @@
   (:require [dat.view]
             [posh.reagent :as posh]
             [reagent.core :as r]
+            [taoensso.timbre :as log]
             [re-com.core :as re-com]))
 
 
@@ -91,11 +92,12 @@
               [:p {:style {:font-size "18px"}} "Congrats! You've got a Datsys app running :-)"]
               ;; A debug example:
               ;[dat.view/debug "todo instance eids:" @(type-instance-eids-rx app :e.type/Todo)]
-              ;[dat.view/debug "Here's a debug example:"
-               ;@(posh/q (:conn app)
-                        ;'[:find ?e ?t-ident
-                          ;:where [?e :e/type ?t]
-                                 ;[?t :db/ident ?t-ident]])]
+              (log/info "inside the main function")
+              [dat.view/debug "Here's a debug example:"
+               @(posh/q '[:find ?e ?t-ident
+                          :where [?e :e/type ?t]
+                                 [?t :db/ident ?t-ident]]
+                        (:conn app))]
               ;; XXX TODO Get this working now...
               [todos-view app]]])
 
