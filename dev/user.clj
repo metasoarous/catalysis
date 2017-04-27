@@ -52,12 +52,11 @@
 
 
 ;; You can use this to add dependencies without rebooting your repl.
-;; Perhaps wrap into a helpful function which takes the lib name and version (ideally just optionally; newest would
-;; default) and installs that attribute using the code below.
-;; TODO XXX
-(comment
-  (use '[cemerick.pomegranate :only (add-dependencies)])
-  (add-dependencies :coordinates '[[slingshot "0.12.2"]]
-                       :repositories (merge cemerick.pomegranate.aether/maven-central
-                                            {"clojars" "http://clojars.org/repo"})))
-
+(defmacro add-dependency [dependency]
+  "A macro for adding a dependency via Pomegranate.
+   Usage: (add-dependency [cheshire \"5.7.0\"])
+   Remember that you still need to (require) or (use) the new namespaces."
+  `(do (~'require '[cemerick.pomegranate])
+       (~'cemerick.pomegranate/add-dependencies :coordinates '[~dependency]
+         :repositories (~'merge cemerick.pomegranate.aether/maven-central
+                         {"clojars" "http://clojars.org/repo"}))))
