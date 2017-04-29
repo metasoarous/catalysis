@@ -96,15 +96,15 @@
   ;; nREPL by default starts in the :main namespace, we want to start in `user`
   ;; because that's where our development helper functions like (run) and
   ;; (browser-repl) live.
-  :repl-options {:init-ns user}
+  :repl-options {:init-ns user
                  ;should have this auto-gen
-                 ;:port 1234234}
+                 :port 11233}
 
   ;; When running figwheel from nREPL, figwheel will read this configuration
   ;; stanza, but it will read it without passing through leiningen's profile
   ;; merging. So don't put a :figwheel section under the :dev profile, it will
   ;; not be picked up, instead configure figwheel here on the top level.
-  :figwheel {;; :server-port 3449                ;; default. overwritten by datsys config anyways
+  :figwheel {:server-port 11234                ;; default. overwritten by datsys config anyways
              ;; :server-ip "127.0.0.1"           ;; default
              :css-dirs ["resources/public/css"]  ;; watch and update CSS
              :server-logfile "logs/figwheel.log"}
