@@ -1,4 +1,4 @@
-(ns dat.sys.client.events
+(ns dat.sys.events
   (:require [dat.reactor :as reactor]
             [datascript.core :as d]))
 
