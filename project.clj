@@ -1,4 +1,4 @@
-(defproject datsys "0.0.1-alpha1-SNAPSHOT"
+(defproject datsys "0.0.1-alpha3"
   :description "(+ clj cljs datomic datascript frp) web development framework" ;;should this be "an" or "un"?
   :url "https://github.com/metasoarous/datsys"
   :license {:name "Eclipse Public License"
@@ -11,10 +11,10 @@
                  [org.clojure/core.match "0.3.0-alpha4"]
                  ;[org.clojure/core.typed "0.3.28"] ;; WARNING: 0.3.28 breaks piggieback(!); 0.3.23 known-safe
                  ;; Datsys things
-                 [datsync "0.0.1-alpha1-SNAPSHOT"]
-                 [datview "0.0.1-alpha2-SNAPSHOT"]
-                 [datspec "0.0.1-alpha1-SNAPSHOT"]
-                 [datreactor "0.0.1-alpha1-SNAPSHOT"]
+                 [datsync "0.0.1-alpha3"]
+                 [datview "0.0.1-alpha3"]
+                 [datspec "0.0.1-alpha3"]
+                 [datreactor "0.0.1-alpha3"]
                  ;; Other stuff (should try to clean things up once in main project)
                  [com.stuartsierra/component "0.3.2"]
                  [environ "1.1.0"]
