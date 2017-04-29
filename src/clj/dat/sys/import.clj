@@ -9,7 +9,7 @@
 (defrecord Importer [config datomic]
   component/Lifecycle
   (start [component]
-    (log/info "Importering data")
+    (log/info "Importing data")
     (let [data (-> "resources/test-data.edn" slurp read-string)]
       @(d/transact (:conn datomic) data)))
   (stop [component]

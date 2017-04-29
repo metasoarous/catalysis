@@ -5,7 +5,7 @@
             [dat.sys.config :as config]
             [dat.sys.datomic :as datomic]
             [dat.sys.server :as server]
-            [dat.sys.shared.routes :as routes]
+            [dat.sys.routes :as routes]
             [dat.sys.ring-handler :as handler]
             [dat.sys.app :as app]
             [dat.sys.import :as import]))

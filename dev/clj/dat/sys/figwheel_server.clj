@@ -1,7 +1,7 @@
-(ns dat.sys.dev.figwheel-server
+(ns dat.sys.figwheel-server
   (:require [com.stuartsierra.component :as component]
             [figwheel-sidecar.system :as figwheel]
-            [dat.sys.shared.utils :refer [deep-merge]]
+            [dat.sys.utils :refer [deep-merge]]
             [taoensso.timbre :as log :include-macros true]))
 
 

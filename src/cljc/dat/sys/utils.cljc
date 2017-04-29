@@ -1,4 +1,4 @@
-(ns dat.sys.shared.utils)
+(ns dat.sys.utils)
 
 (defn deref-or-value
   [val-or-atom]
