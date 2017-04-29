@@ -28,6 +28,6 @@
  {:db/id #db/id[:db.part/user -153] :e/type :e.type/Todo :e/name "compose symphony" :e/tags [#db/id[:db.part/user -30]]}
  {:db/id #db/id[:db.part/user -154] :e/type :e.type/Todo :e/name "compose really epic symphony" :e/tags [#db/id[:db.part/user -30]]}
  {:db/id #db/id[:db.part/user -155] :e/type :e.type/Todo :e/name "write book with colin" :e/description "About patterns and chaos" :e/category #db/id[:db.part/user -3]}
- {:db/id #db/id[:db.part/user -156] :e/type :e.type/Todo :e/name "ride bike with Calvin" :e/category #db/id[:db.part/user -2]}
+ {:db/id #db/id[:db.part/user -156] :e/type :e.type/Todo :e/name "ride bike with Calvin" :e/category #db/id[:db.part/user -2]}]
 
-  ]
+
