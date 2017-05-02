@@ -1,28 +1,4 @@
-/logs
-/target
-/classes
-/checkouts
+target
+.lein-env
+*.swo
 pom.xml
-pom.xml.asc
-*.jar
-*.class
-/.lein-*
-/.nrepl-port
-/resources/public/js/*.js
-/resources/public/js/
-profiles.clj
-config/local/
-data
-# So you can install datomic here
-datomic/
-# You can run a local checkout of datsync here
-libs/datsync
-libs/
-Session.vim
-*.ini
-.idea
-*.iml
-.idea/
-checkouts/
-figwheel_server.log
-dev-resources
