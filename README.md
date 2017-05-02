@@ -36,7 +36,7 @@ The goal is that it be possible to swap implementations in and out depending on 
 (So far this system modularization only extends as far as the client, since that's where most of the code is.
  However, the server will end up following this pattern as well.)
 
-Let's take a look at `dat.sys.client.app`:
+Let's take a look at `yourapp.client.app` (assuming you ran `lein new datsys yourapp`):
 
 ```clj
 (defn new-system []
@@ -81,9 +81,11 @@ So that'll be another nice layer of expressiveness open to us for describing sub
 
 ## Usage
 
-To get running, clone, and cd into the project directory (`datsys`).
+To get running, create a new app using the datsys template, cd in and fire up your repl:
 
 ```
+lein new datsys yourapp
+cd yourapp
 lein repl
 ```
 
@@ -145,14 +147,14 @@ Because of the seamless shuttling of data back and forth between server and clie
 
 The schema file is located in `resources/schema.edn`.
 The data in this file is a [conformity](https://github.com/rkneufeld/conformity) spec, so you can continue to use this same file for all your migrations.
-If you want to see how these migrations are hooked up, take a look at the `dat.sys.datomic/Datomic` component.
+If you want to see how these migrations are hooked up, take a look at the `yourapp.datomic/Datomic` component.
 
 There's also some seed data in `resources/test-data.edn` for you to play with.
 
 
 ### Front end
 
-Views are in `dat.sys.client.views`, and you'll note that the `main` function there is hooked up at the end of the `dat.sys.client.app` namespace (where we created our system).
+Views are in `yourapp.client.views`, and you'll note that the `main` function there is hooked up at the end of the `yourapp.client.app` namespace (where we created our system).
 
 The view code is written in a combination of [Reagent](https://github.com/reagent-project/reagent) and [Posh](https://github.com/mpdairy/posh) within the context of the [Datview](https://github.com/metasoarous/datview) UI toolkit.
 More or less, Datview is a set of helper functions for translating queries and/or query data into hiccup (and thus DOM).
@@ -231,7 +233,7 @@ But the following is a very big picture overview of some of the more major thing
 
 ### Config
 
-This application uses a system configuration component found in `dat.sys.config`.
+This application uses a system configuration component found in `yourapp.config`.
 There's a default settings map there you can edit, and all settings are customizable via environment variables or run time arguments.
 Feel free to extend this for your needs to keep all your config logic in one place.
 Or replace with whatever you like here.
