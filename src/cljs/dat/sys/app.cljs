@@ -9,6 +9,7 @@
             [dat.sync.client :as dat.sync]
             [dat.sys.views :as views]
             [dat.sys.events]
+            [dat.sys.kabel :as kabel]
             [dat.reactor.dispatcher :as dispatcher]
             [datascript.core :as d]
             [taoensso.timbre :as log :include-macros true]
@@ -29,6 +30,7 @@
         :remote     (sente/new-sente-remote)
         ;; This should eventually be optional/defaulted
         :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
+        :kabel (component/using (kabel/new-kabel) [])
         :app        (component/using
                       ;; Should also be able to specify your own conn here, though one will be created for you
                       (dat.view/new-datview {:dat.view/main views/main})
