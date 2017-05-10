@@ -21,7 +21,7 @@
     ;; we just mirror the messages back
     (go-loop [i (<! in)]
       (when i
-        (println "ponging " i)
+        (log/debug "ponging " i)
         (>! out i)
         (recur (<! in))))
     ;; Note that we pass through the supervisor, peer and new channels
@@ -32,9 +32,9 @@
         new-out (chan)]
     (go-try S
             (put? S out "ping")
-            (println "1. client incoming message:" (<? S in))
+            (log/debug "1. client incoming message:" (<? S in))
             (put? S out "ping2")
-            (println "2. client incoming message:" (<? S in)))
+            (log/debug "2. client incoming message:" (<? S in)))
     [S peer [new-in new-out]]))
 
 ;; this url is needed for the server to open the proper
@@ -45,10 +45,9 @@
 (def server-id #uuid "05a06e85-e7ca-4213-9fe5-04ae511e50a0")
 (def client-id #uuid "c14c628b-b151-4967-ae0a-7c83e5622d0f")
 
-(defrecord KabelConnection [peer-conn server err-ch ring-handler peer]
+(defrecord KabelConnection [peer-conn]
   component/Lifecycle
   (start [component]
-         (log/info "Get ready")
          (let [peer-conn (or peer-conn
                              #?(:clj
                                  (peer/server-peer S (http-kit/create-http-kit-handler! S url server-id) server-id
@@ -60,12 +59,11 @@
                                  :cljs (peer/client-peer S client-id
                                                          ping-middleware
                                                          identity)))]
-           (log/info "Starting Kabel Connection")
            #?(:clj
                (<?? S (peer/start peer-conn))
               :cljs
                (go-loop [] (<? S (peer/connect S peer-conn url))))
-
+           (log/info "Started Kabel Connection")
          (assoc component
            :peer-conn peer-conn)))
   (stop [component]
