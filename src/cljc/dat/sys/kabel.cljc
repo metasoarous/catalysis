@@ -67,7 +67,7 @@
          (assoc component
            :peer-conn peer-conn)))
   (stop [component]
-        #?(:clj (<?? S (peer/stop server)))
+        #?(:clj (<?? S (peer/stop peer-conn)))
         (assoc component
           :peer-conn nil)))
 
