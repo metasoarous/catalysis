@@ -1,87 +1,80 @@
 (ns dat.sys.kabel
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as log :include-macros true]
-            #?(:clj [kabel.http-kit :refer [create-http-kit-handler!]])
-            [kabel.peer :as kpeer]
-            #?(:clj [superv.async :refer [go-try go-loop-try S <? >? put? <??]]
-              :cljs [superv.async :refer [go-try go-loop-try S <? >? put?]])
-            #?(:clj
-                [clojure.core.async :as async :refer [go-loop <! >! >!!]]
-              :cljs
-                [clojure.core.async :as async :refer [<! >!]]))
-  #?(:cljs
-      (:require-macros [cljs.core.async.macros :refer [go-loop]])))
+            [kabel.client :as cli]
+            #?(:clj [kabel.http-kit :as http-kit])
+            [kabel.peer :as peer]
+            #?(:clj [superv.async :refer [<?? go-try S go-loop-try <? >? put?]]
+               :cljs [superv.async :refer [go-try S go-loop-try <? >? put?]])
+            #?(:clj [clojure.core.async :refer [go go-loop timeout <! >! <!! put! chan]]
+               :cljs [clojure.core.async :refer [timeout <! >! put! chan]])
+            [kabel.middleware.transit :refer [transit]]
+            [hasch.core :refer [uuid]])
+   #?(:cljs
+      (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  )
 
-(defn pong-middleware [[peer [in out]]]
-  (let [new-in (async/chan)]
-    (go-loop [p (<! in)]
-      (when p
-        (log/info "received ping, sending pong")
-        (>! out {:type :pong})
-        (>! new-in p) ;; pass along (or not...)
+;; server peer code
+(defn pong-middleware [[S peer [in out]]]
+  (let [new-in (chan)
+        new-out (chan)]
+    ;; we just mirror the messages back
+    (go-loop [i (<! in)]
+      (when i
+        (println "ponging " i)
+        (>! out i)
         (recur (<! in))))
-    [peer [new-in out]]))
+    ;; Note that we pass through the supervisor, peer and new channels
+    [S peer [new-in new-out]]))
 
-(defn ping [[peer [in out]]]
-  (go-loop []
-    (<! (async/timeout 5000))
-    (>! out {:type :ping})
-    (recur))
-  [peer [in out]])
+;; this url is needed for the server to open the proper
+;; socket and for the client to know where to connect to
+(def url "ws://localhost:47291")
 
-(defn create-peer [{:as handler :keys [url kind]} & args]
-  (log/info "argssszz" kind)
-  (case kind
-    :kabel.peer/server {:kind :kabel.peer/server
-                        :url url
-                        :peer (apply kpeer/server-peer S handler args)}
-    :kabel.peer/client {:kind :kabel.peer/client
-                        :url url
-                        :peer (apply kpeer/client-peer S args)}))
+;; ;; this is useful to track messages, so each peer should have a unique id
+(def server-id #uuid "05a06e85-e7ca-4213-9fe5-04ae511e50a0")
+(def client-id #uuid "c14c628b-b151-4967-ae0a-7c83e5622d0f")
 
-(defn connect [{:keys [kind peer url]}]
-  (case kind
-    :kabel.peer/server (kpeer/start peer)
-    :kabel.peer/client (kpeer/connect S peer url)))
-
-(defn close [{:keys [kind peer]}]
-  (if (= kind :kabel.peer/server)
-    (kpeer/stop peer)))
-
-(defrecord KabelConnection [err-ch ring-handler peer]
+(defrecord KabelConnection [peer-conn server err-ch ring-handler peer]
   component/Lifecycle
   (start [component]
          (log/info "Get ready")
-         (let [url "ws://localhost:9090/kabel"
-               err-ch (or err-ch (async/chan))
-               peer nil
-;;                handler nil
-               handler (or ring-handler
-                           #?(:clj
-                               (assoc (create-http-kit-handler! S url err-ch) :kind :kabel.peer/server)
-                              :cljs
-                               {:kind :kabel.peer/client
-                                :url url}))
-               middleware #?(:clj pong-middleware :cljs ping)
-               peer (or peer
-                        (create-peer handler err-ch middleware))]
+         (let [peer-conn (or peer-conn
+                             #?(:clj
+                                 (peer/server-peer S (http-kit/create-http-kit-handler! S url server-id) server-id
+                                                   ;; here you can plug in your (composition of) middleware(s)
+                                                   pong-middleware
+                                                   ;; we chose no serialization (pr-str/read-string by default)
+                                                   identity
+                                                   ;; we could also pick the transit middleware
+                                                   #_transit)
+                                 :cljs (peer/client-peer S client-id
+                                                         ;; Here we have a simple middleware to trigger some roundtrips
+                                                         ;; from the client
+                                                         (fn [[S peer [in out]]]
+                                                           (let [new-in (chan)
+                                                                 new-out (chan)]
+                                                             (go-try S
+                                                                     (put? S out "ping")
+                                                                     (println "1. client incoming message:" (<? S in))
+                                                                     (put? S out "ping2")
+                                                                     (println "2. client incoming message:" (<? S in)))
+                                                             [S peer [new-in new-out]]))
+                                                         ;; we need to pick the same middleware for serialization
+                                                         ;; (no auto-negotiation yet)
+                                                         identity)))]
            (log/info "Starting Kabel Connection")
            #?(:clj
-               (log/info "<??" (<?? S (connect peer)))
+               (<?? S (peer/start peer-conn))
               :cljs
-               (go-loop []
-                  (log/info "go<?" (<? S (connect peer)))))
+               (go-loop [] (<? S (peer/connect S peer-conn url))))
 
          (assoc component
-           :err-ch err-ch
-           :ring-handler handler
-           :peer peer)))
+           :peer-conn peer-conn)))
   (stop [component]
-        (close peer)
+        #?(:clj (<?? S (peer/stop server)))
         (assoc component
-          :err-ch nil
-          :ring-handler nil
-          :peer nil)))
+          :peer-conn nil)))
 
 (defn new-kabel []
   (map->KabelConnection {}))
