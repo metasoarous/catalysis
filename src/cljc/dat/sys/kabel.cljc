@@ -27,6 +27,16 @@
     ;; Note that we pass through the supervisor, peer and new channels
     [S peer [new-in new-out]]))
 
+(defn ping-middleware [[S peer [in out]]]
+  (let [new-in (chan)
+        new-out (chan)]
+    (go-try S
+            (put? S out "ping")
+            (println "1. client incoming message:" (<? S in))
+            (put? S out "ping2")
+            (println "2. client incoming message:" (<? S in)))
+    [S peer [new-in new-out]]))
+
 ;; this url is needed for the server to open the proper
 ;; socket and for the client to know where to connect to
 (def url "ws://localhost:47291")
@@ -42,26 +52,13 @@
          (let [peer-conn (or peer-conn
                              #?(:clj
                                  (peer/server-peer S (http-kit/create-http-kit-handler! S url server-id) server-id
-                                                   ;; here you can plug in your (composition of) middleware(s)
                                                    pong-middleware
                                                    ;; we chose no serialization (pr-str/read-string by default)
                                                    identity
                                                    ;; we could also pick the transit middleware
                                                    #_transit)
                                  :cljs (peer/client-peer S client-id
-                                                         ;; Here we have a simple middleware to trigger some roundtrips
-                                                         ;; from the client
-                                                         (fn [[S peer [in out]]]
-                                                           (let [new-in (chan)
-                                                                 new-out (chan)]
-                                                             (go-try S
-                                                                     (put? S out "ping")
-                                                                     (println "1. client incoming message:" (<? S in))
-                                                                     (put? S out "ping2")
-                                                                     (println "2. client incoming message:" (<? S in)))
-                                                             [S peer [new-in new-out]]))
-                                                         ;; we need to pick the same middleware for serialization
-                                                         ;; (no auto-negotiation yet)
+                                                         ping-middleware
                                                          identity)))]
            (log/info "Starting Kabel Connection")
            #?(:clj
