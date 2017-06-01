@@ -4,9 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.0.0"
-  :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
                  [org.clojure/tools.reader "1.0.0-beta3"]
-                 [org.clojure/clojurescript "1.9.518"]
+                 [org.clojure/clojurescript "1.9.542"]
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  ;[org.clojure/core.typed "0.3.28"] ;; WARNING: 0.3.28 breaks piggieback(!); 0.3.23 known-safe
@@ -43,6 +43,7 @@
 
                  [io.replikativ/superv.async "0.2.7"]
                  [io.replikativ/kabel "0.2.0"]
+                 [org.onyxplatform/onyx-local-rt "0.10.0.0-beta8"]
 
                  ;;For the free version of Datomic
                  [com.datomic/datomic-free "0.9.5544" :exclusions [joda-time org.slf4j/slf4j-nop com.google.guava/guava commons-codec]]
@@ -66,14 +67,14 @@
   :source-paths ["src/cljc"
                  "src/clj"
                  ;; TODO Uncomment if you would like checkouts; This should be +edge for everything on
-                 ;"checkouts/datview/src/clj"
-                 ;"checkouts/datview/src/cljc"
-                 ;"checkouts/datsync/src/clj"
-                 ;"checkouts/datsync/src/cljc"
-                 ;"checkouts/datreactor/src/clj"
-                 ;"checkouts/datreactor/src/cljc"
-                 ;"checkouts/datspec/src/clj"
-                 ;"checkouts/datspec/src/cljc"
+                 "checkouts/datview/src/clj"
+                 "checkouts/datview/src/cljc"
+                 "checkouts/datsync/src/clj"
+                 "checkouts/datsync/src/cljc"
+                 "checkouts/datreactor/src/clj"
+                 "checkouts/datreactor/src/cljc"
+                 "checkouts/datspec/src/clj"
+                 "checkouts/datspec/src/cljc"
                  #_:end]
 
   :resource-paths ["resources"]
@@ -138,14 +139,14 @@
                     :source-paths ["dev/clj"
                                    "dev/cljc"
                                    ;; TODO Uncomment if you would like checkouts; This should be +edge opton or some such
-                                   ;"checkouts/datview/src/cljs"
-                                   ;"checkouts/datview/src/cljc"
-                                   ;"checkouts/datsync/src/cljs"
-                                   ;"checkouts/datsync/src/cljc"
-                                   ;"checkouts/datreactor/src/cljs"
-                                   ;"checkouts/datreactor/src/cljc"
-                                   ;"checkouts/datspec/src/cljs"
-                                   ;"checkouts/datspec/src/cljc"
+                                   "checkouts/datview/src/cljs"
+                                   "checkouts/datview/src/cljc"
+                                   "checkouts/datsync/src/cljs"
+                                   "checkouts/datsync/src/cljc"
+                                   "checkouts/datreactor/src/cljs"
+                                   "checkouts/datreactor/src/cljc"
+                                   "checkouts/datspec/src/cljs"
+                                   "checkouts/datspec/src/cljc"
                                    #_:end]
                     ;; libs/datsync/resources is important here; It's lib code need access to it's resources
                     ;; dir in dev

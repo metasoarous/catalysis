@@ -18,7 +18,7 @@
      :config (config/create-config config-overrides)
      :datomic (component/using (datomic/create-datomic) [:config])
      :importer (component/using (import/new-importer) [:config :datomic])
-     :kabel (component/using (kabel/new-kabel) [])
+;;      :kabel (component/using (kabel/new-kabel) [])
      :ws-connection (component/using (ws/new-ws-connection) [:config])
      :routes (component/using (routes/new-routes) [:config])
      :ring-handler (component/using (handler/new-ring-handler) [:config :routes :ws-connection])
