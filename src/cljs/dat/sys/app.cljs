@@ -5,13 +5,10 @@
             [dat.reactor :as reactor]
             [dat.remote]
             [dat.remote.impl.sente :as sente]
-;;             [dat.reactor.onyx :as onyx-react]
-;;             [dat.sync.core :as syncer]
             ;; TODO Chacge over to new ns
-            [dat.sync.client :as dat.sync]
+            [dat.sync.core :as dat.sync]
             [dat.sys.views :as views]
             [dat.sys.events]
-;;             [dat.sys.kabel :as kabel]
             [dat.reactor.dispatcher :as dispatcher]
             [datascript.core :as d]
             [taoensso.timbre :as log :include-macros true]
@@ -32,16 +29,10 @@
         :remote     (sente/new-sente-remote)
         ;; This should eventually be optional/defaulted
         :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
-;;         :kabel (component/using (kabel/new-kabel) [])
-;;         :onyx (component/using (syncer/new-datsync) [:remote :dispatcher :datsync])
         :app        (component/using
                       ;; Should also be able to specify your own conn here, though one will be created for you
                       (dat.view/new-datview {:dat.view/main views/main})
                       [:remote :dispatcher])
-
-;;         :reactor (component/using
-;;                    (onyx-react/new-onyx-reactor)
-;;                    [:remote :dispatcher :app])
         :reactor    (component/using
                       (reactor/new-simple-reactor)
                       [:remote :dispatcher :app])

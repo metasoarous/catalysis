@@ -1,12 +1,11 @@
 (ns dat.sys.app
-  (:require [dat.sys.datomic :as datomic]
+  (:require [dat.sys.datomic :as d]
             [dat.sys.ws :as ws]
-            [dat.sync.server :as dat.sync]
+            [dat.sync.core :as dat.sync]
             [taoensso.timbre :as log :include-macros true]
             [com.stuartsierra.component :as component]
             [slingshot.slingshot :as slingshot :refer [throw+ try+]]
-            [taoensso.sente :as sente]
-            [datomic.api :as d]))
+            [taoensso.sente :as sente]))
 
 
 
@@ -56,7 +55,7 @@
   ;; What is send-fn here? Does that wrap the uid for us? (0.o)
   [{:as app :keys [datomic ws-connection]} {:as event-msg :keys [id uid send-fn]}]
   (log/info "Sending bootstrap message")
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (datomic/bootstrap (d/db (:conn datomic)))]))
+  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap datomic)]))
 
 ;; Fallback handler; should send message saying I don't know what you mean
 (defmethod event-msg-handler :default ; Fallback

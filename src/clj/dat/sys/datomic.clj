@@ -49,12 +49,16 @@
 (defn create-datomic []
   (map->Datomic {}))
 
+(defn transact [datomic txs]
+  (d/transact (:conn datomic) txs))
+
 (defn bootstrap
-  [db]
+  [datomic]
   ;; This could be a lot more perfomant; And should probably be generally smarter
   (log/info "Calculating bootstrap data...")
-  (->> (d/datoms db :eavt)
-       (map (fn [[e a v t]] e))
-       (distinct)
-       (d/pull-many db '[*])
-       (filter #(not (:db/fn %)))))
+  (let [db (d/db (:conn datomic))]
+    (->> (d/datoms db :eavt)
+         (map (fn [[e a v t]] e))
+         (distinct)
+         (d/pull-many db '[*])
+         (filter #(not (:db/fn %))))))

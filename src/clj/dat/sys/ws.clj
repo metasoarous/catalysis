@@ -1,7 +1,5 @@
 (ns dat.sys.ws
-  (:require [dat.sys.datomic :as datomic]
-            [datomic.api :as d]
-            [com.stuartsierra.component :as component]
+  (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as log :include-macros true]
             [clojure.core.async :as async]
             [taoensso.sente.server-adapters.http-kit :as sente-http]
