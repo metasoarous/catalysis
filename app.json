@@ -1,7 +1,7 @@
 {
   "name": "ULog: Easy life management",
   "description": "A barebones Reagent+Sente app deployable to Heroku. Uses Figwheel (for development build) and Component (lifecycle management).",
-  "keywords": ["catalysis", "clojure", "clojurescript", "react", "web socket", "reagent", "sente", "heroku", "figwheel", "component", "enterlab"],
+  "keywords": ["datsys", "clojure", "clojurescript", "react", "web socket", "reagent", "sente", "heroku", "figwheel", "component", "enterlab"],
   "env": {
     "LEIN_BUILD_TASK": "package"}
 }
