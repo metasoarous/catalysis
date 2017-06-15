@@ -20,7 +20,7 @@
  ;; Other misc todos...
  {:db/id #db/id[:db.part/user -120] :e/type :e.type/Todo :e/name "dinner at la escalera" :e/description "With the love of my life" :e/category #db/id[:db.part/user -2] :e/tags [#db/id[:db.part/user -20]]}
  {:db/id #db/id[:db.part/user -130] :e/type :e.type/Todo :e/name "play piano" :e/description "Practice and work on tunes" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -30]]}
- {:db/id #db/id[:db.part/user -140] :e/type :e.type/Todo :e/name "finish catalysis" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -10] #db/id[:db.part/user -40]]}
+ {:db/id #db/id[:db.part/user -140] :e/type :e.type/Todo :e/name "finish datsys" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -10] #db/id[:db.part/user -40]]}
  ;; Some more stuff to play with...
  {:db/id #db/id[:db.part/user -150] :e/type :e.type/Todo :e/name "think about snails"}
  {:db/id #db/id[:db.part/user -151] :e/type :e.type/Todo :e/name "play piano"}

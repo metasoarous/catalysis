@@ -4,8 +4,8 @@
 ;; We'll be using conformity (https://github.com/rkneufeld/conformity) to define "norms" about
 ;; what we expect to see in the shape of the database.
 
-{;; ## Catalysis Domain model
- :catalysis/base-schema
+{;; ## Datsys Domain model
+ :datsys/base-schema
  ;; This is how conformity does dependencies (:requires)
  {:requires [:dat.view/base-schema]
   :txes
