@@ -40,10 +40,12 @@
                  [com.taoensso/timbre "4.8.0"]
                  [com.taoensso/encore "2.88.2"]
                  [com.taoensso/sente "1.11.0" :exclusions [org.clojure/tools.reader]]
+                 [com.taoensso/nippy "2.13.0"]
 
                  [io.replikativ/superv.async "0.2.7"]
                  [io.replikativ/kabel "0.2.0"]
                  [org.onyxplatform/onyx-local-rt "0.10.0.0-beta8"]
+                 [com.rpl/specter "1.0.1"]
 
                  ;;For the free version of Datomic
                  [com.datomic/datomic-free "0.9.5544" :exclusions [joda-time org.slf4j/slf4j-nop com.google.guava/guava commons-codec]]

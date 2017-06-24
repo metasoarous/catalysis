@@ -1,5 +1,6 @@
 (ns dat.sys.app
   (:require [dat.sys.datomic :as d]
+            [clojure.core.async :as async :refer [go go-loop]]
             [dat.sys.ws :as ws]
             [dat.sync.core :as dat.sync]
             [taoensso.timbre :as log :include-macros true]
@@ -39,7 +40,8 @@
 ;; don't really need this... should delete
 (defmethod event-msg-handler :chsk/ws-ping
   [_ _]
-  (log/debug "Ping"))
+;;   (log/debug "Ping")
+  )
 
 ;; Setting up our two main dat.sync hooks
 
@@ -55,12 +57,38 @@
   ;; What is send-fn here? Does that wrap the uid for us? (0.o)
   [{:as app :keys [datomic ws-connection]} {:as event-msg :keys [id uid send-fn]}]
   (log/info "Sending bootstrap message")
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap datomic)]))
+  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap! datomic)]))
 
 ;; Fallback handler; should send message saying I don't know what you mean
 (defmethod event-msg-handler :default ; Fallback
   [app {:as event-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (log/warn "Unhandled event:" id))
+
+;; ## Works with unified dat.sync.core
+(defmulti server-handler (fn [app {:as segment :keys [id]}] id))
+
+(defmethod server-handler :dat.sync.client/bootstrap
+  [{:keys [ws-connection datomic]} {:as seg :keys [uid]}]
+  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap! datomic)]))
+
+(defmethod server-handler :dat.sync.remote/tx
+  [{:keys [world]} {:as seg :keys [?data]}]
+  (async/put! (:in world) {:datoms ?data}))
+
+(defmethod server-handler :default
+  [{:keys []} seg]
+;;   (log/warn "Unhandled event:" id)
+  )
+
+(defmethod server-handler :chsk/ws-ping
+  [_ _]
+  (log/debug "Ping")
+  )
+
+(defn go-rebroadcast-world-txs! [{:keys [ws-connection world]}]
+  (go-loop []
+    (ws/broadcast! ws-connection [:dat.sync.client/recv-remote-tx (async/<! (:in world))])
+    (recur)))
 
 
 ;; ## Transaction report handler
@@ -89,9 +117,16 @@
                           (:ch-recv ws-connection)
                           ;(fn [event] (log/info "Just got event:" (with-out-str (clojure.pprint/pprint))))
                           ;; There sould be a way of specifying app-wide middleware here
-                          (partial event-msg-handler component))]
+                          (partial server-handler;;event-msg-handler
+                                   component))]
       ;; Start our transaction listener
-      (dat.sync/start-transaction-listener! (:tx-report-queue datomic) (partial handle-transaction-report! ws-connection))
+;;       (dat.sync/start-transaction-listener! (:tx-report-queue datomic) (partial handle-transaction-report! ws-connection))
+
+
+;;       (go-loop []
+;;         (handle-transaction-report! ws-connection (async/<!! (:tx-report-chan datomic)))
+;;         (recur))
+      (go-rebroadcast-world-txs! component)
       (assoc component :sente-stop-fn sente-stop-fn)))
   (stop [component]
     (log/debug "Stopping websocket router")

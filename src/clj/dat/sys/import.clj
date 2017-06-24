@@ -11,7 +11,7 @@
   (start [component]
     (log/info "Importing data")
     (let [data (-> "resources/test-data.edn" slurp read-string)]
-      @(d/transact datomic data)))
+      (d/transact! datomic data)))
   (stop [component]
        component))
 

@@ -3,14 +3,16 @@
                    [reagent.ratom :refer [reaction]])
   (:require [dat.view]
             [dat.reactor :as reactor]
+            [dat.reactor.onyx :as oreactor]
             [dat.remote]
+            [dat.sys.db :as db]
             [dat.remote.impl.sente :as sente]
             ;; TODO Chacge over to new ns
             [dat.sync.core :as dat.sync]
             [dat.sys.views :as views]
             [dat.sys.events]
             [dat.reactor.dispatcher :as dispatcher]
-            [datascript.core :as d]
+;;             [datascript.core :as d]
             [taoensso.timbre :as log :include-macros true]
             [reagent.core :as r]
             [com.stuartsierra.component :as component]
@@ -21,10 +23,9 @@
 ;; This is where everything actually ties together and starts.
 ;; If you're interested in tweaking things at a system level, have a look at metasoarous/datspec
 
-
 ;; ## The default system
 
-(defn new-system []
+(defn new-system-deprecated []
   (-> (component/system-map
         :remote     (sente/new-sente-remote)
         ;; This should eventually be optional/defaulted
@@ -39,6 +40,23 @@
         :datsync    (component/using
                       (dat.sync/new-datsync)
                       [:remote :dispatcher]))))
+
+(defn new-system []
+  (component/system-map
+    :datomic (component/using
+               (db/create-datascript)
+               [])
+    :remote     (sente/new-sente-remote)
+    :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
+    :app        (component/using
+                  (dat.view/new-datview {:dat.view/main views/main})
+                  [:reactor :dispatcher])
+    :reactor    (component/using
+                  (oreactor/new-onyx-reactor)
+                  {:transactor :datomic
+                   :remote :remote
+                   :dispatcher :dispatcher})))
+
 
 
 ;; ## Customizing things
