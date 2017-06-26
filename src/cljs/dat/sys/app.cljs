@@ -22,7 +22,7 @@
 
 ;; ## The default system
 
-(defn new-system []
+(defn new-system-deprecated []
   (-> (component/system-map
         :remote     (sente/new-sente-remote)
         ;; This should eventually be optional/defaulted
@@ -38,7 +38,7 @@
                       (dat.sync/new-datsync)
                       [:remote :dispatcher]))))
 
-(defn new-system2 []
+(defn new-system []
   (component/system-map
     :datascript (component/using
                   (db/create-datascript)
@@ -47,12 +47,20 @@
     :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
     :app        (component/using
                   (dat.view/new-datview {:dat.view/main views/main})
-                  [:reactor :dispatcher :datascript])
+                  [:remote :dispatcher :datascript])
+;;     :reactor    (component/using
+;;                   (reactor/new-simple-reactor)
+;;                   [:remote :dispatcher :app])
+    :datsync    (component/using
+                  (dat.sync/new-datsync)
+                  [:remote :dispatcher])
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
                   {:transactor :datascript
+                   :app :app
                    :remote :remote
                    :dispatcher :dispatcher})
+
     ;; TODO: connect remote to dispatcher with datsync
     ;; ???: possibly move some of onyx reactor into :datsync component
     ))
