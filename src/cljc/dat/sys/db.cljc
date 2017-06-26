@@ -7,10 +7,10 @@
 ;;             [taoensso.nippy :as nippy]
             [dat.sync.core :as dat.sync]
             [datascript.core :as ds]
-;;             [dat.view]
-;;             [dat.sys.utils :refer [cat-into]]
+            [dat.spec.protocols :as protocols]
+            [dat.sys.utils :refer [deep-merge cat-into]]
 ;;             [com.rpl.specter :as specter]
-;;             [clojure.java.io :as io]
+            #?(:clj [clojure.java.io :as io])
             #?(:clj [io.rkn.conformity :as conformity])
             #?(:clj [datomic.api :as dapi])
             [com.stuartsierra.component :as component]
@@ -33,16 +33,14 @@
       (catch Exception e
         (.printStackTrace e))))))
 
-(defprotocol PTransactor
-  (transact! [this txs])
-  (bootstrap [this])
-  (tx-report-chan [this]))
-
-(defrecord DatascriptDB [conn tx-report-chan]
+(defrecord DatascriptDB [config conn tx-report-chan]
    component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
-          conn (or conn (ds/create-conn))
+          base-schema (deep-merge {:db/ident {:db/ident :db/ident :db/unique :db.unique/identity}
+                                   :dat.sync.remote.db/id {:db/unique :db.unique/identity}}
+                                  (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
+          conn (or conn (ds/create-conn base-schema))
           tx-report-chan (or tx-report-chan (async/chan))]
       (when-not listening?
         ;; ???: is this check already done in ds/listen!
@@ -55,12 +53,12 @@
     (assoc component
       :tx-report-chan nil
       :conn nil))
-  PTransactor
+  protocols/PTransactor
   (transact! [component txs]
-    (ds/transact! txs))
+    (ds/transact! conn txs))
   (bootstrap [component]
     ;;(dat.sync/datom><gdatom conn)
-    (ds/datoms db :eavt))
+    (ds/datoms @conn :eavt))
   (tx-report-chan [component]
     tx-report-chan))
 
@@ -92,20 +90,22 @@
     (assoc component
       :conn nil
       :tx-report-chan nil))
-  PTransactor
+  protocols/PTransactor
   (transact! [component txs]
     (dapi/transact conn txs))
   (bootstrap [component]
-    (->> (dapi/datoms (dapi/db conn) :eavt)
-         (map (fn [[e a v t]] e))
-         (distinct)
-         (dapi/pull-many db '[*])
-         (filter #(not (:db/fn %)))))
+    (let [db (dapi/db conn)]
+          (->> (dapi/datoms db :eavt)
+               (map (fn [[e a v t]] e))
+               (distinct)
+               (dapi/pull-many db '[*])
+               (filter #(not (:db/fn %))))))
   (tx-report-chan [component]
     tx-report-chan)))
 
+#?(:clj
 (defn create-datomic []
-  (map->DatomicDB {}))
+  (map->DatomicDB {})))
 
 ;; (defn transform-tx-ids [txf]
 ;;   (fn [db txs]

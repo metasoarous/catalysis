@@ -1,5 +1,5 @@
 (ns dat.sys.app
-  (:require [dat.sys.datomic :as d]
+  (:require [dat.spec.protocols :as protocols]
             [clojure.core.async :as async :refer [go go-loop]]
             [dat.sys.ws :as ws]
             [dat.sync.core :as dat.sync]
@@ -57,7 +57,7 @@
   ;; What is send-fn here? Does that wrap the uid for us? (0.o)
   [{:as app :keys [datomic ws-connection]} {:as event-msg :keys [id uid send-fn]}]
   (log/info "Sending bootstrap message")
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap! datomic)]))
+  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
 
 ;; Fallback handler; should send message saying I don't know what you mean
 (defmethod event-msg-handler :default ; Fallback
@@ -69,7 +69,7 @@
 
 (defmethod server-handler :dat.sync.client/bootstrap
   [{:keys [ws-connection datomic]} {:as seg :keys [uid]}]
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (d/bootstrap! datomic)]))
+  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
 
 (defmethod server-handler :dat.sync.remote/tx
   [{:keys [world]} {:as seg :keys [?data]}]
@@ -117,16 +117,11 @@
                           (:ch-recv ws-connection)
                           ;(fn [event] (log/info "Just got event:" (with-out-str (clojure.pprint/pprint))))
                           ;; There sould be a way of specifying app-wide middleware here
-                          (partial server-handler;;event-msg-handler
-                                   component))]
+                          (partial event-msg-handler component))]
       ;; Start our transaction listener
-;;       (dat.sync/start-transaction-listener! (:tx-report-queue datomic) (partial handle-transaction-report! ws-connection))
-
-
-;;       (go-loop []
-;;         (handle-transaction-report! ws-connection (async/<!! (:tx-report-chan datomic)))
-;;         (recur))
-      (go-rebroadcast-world-txs! component)
+      (go-loop []
+        (handle-transaction-report! ws-connection (async/<!! (:tx-report-chan datomic)))
+        (recur))
       (assoc component :sente-stop-fn sente-stop-fn)))
   (stop [component]
     (log/debug "Stopping websocket router")

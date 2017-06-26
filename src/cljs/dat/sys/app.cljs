@@ -7,16 +7,13 @@
             [dat.remote]
             [dat.sys.db :as db]
             [dat.remote.impl.sente :as sente]
-            ;; TODO Chacge over to new ns
             [dat.sync.core :as dat.sync]
             [dat.sys.views :as views]
             [dat.sys.events]
             [dat.reactor.dispatcher :as dispatcher]
-;;             [datascript.core :as d]
             [taoensso.timbre :as log :include-macros true]
             [reagent.core :as r]
-            [com.stuartsierra.component :as component]
-            [posh.core :as posh]))
+            [com.stuartsierra.component :as component]))
 
 ;; # The system & main function
 
@@ -25,7 +22,7 @@
 
 ;; ## The default system
 
-(defn new-system-deprecated []
+(defn new-system []
   (-> (component/system-map
         :remote     (sente/new-sente-remote)
         ;; This should eventually be optional/defaulted
@@ -41,21 +38,24 @@
                       (dat.sync/new-datsync)
                       [:remote :dispatcher]))))
 
-(defn new-system []
+(defn new-system2 []
   (component/system-map
-    :datomic (component/using
-               (db/create-datascript)
-               [])
+    :datascript (component/using
+                  (db/create-datascript)
+                  [])
     :remote     (sente/new-sente-remote)
     :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
     :app        (component/using
                   (dat.view/new-datview {:dat.view/main views/main})
-                  [:reactor :dispatcher])
+                  [:reactor :dispatcher :datascript])
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
-                  {:transactor :datomic
+                  {:transactor :datascript
                    :remote :remote
-                   :dispatcher :dispatcher})))
+                   :dispatcher :dispatcher})
+    ;; TODO: connect remote to dispatcher with datsync
+    ;; ???: possibly move some of onyx reactor into :datsync component
+    ))
 
 
 
