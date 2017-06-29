@@ -7,7 +7,7 @@
             [taoensso.sente.packers.transit :as sente-transit]))
 
 
-(defrecord WSRingHandlers [ajax-post-fn ajax-get-or-ws-handshake-fn])
+;; (defrecord WSRingHandlers [ajax-post-fn ajax-get-or-ws-handshake-fn])
 
 (defrecord WSConnection [ch-recv connected-uids send-fn ring-handlers]
   component/Lifecycle
@@ -24,8 +24,9 @@
           :ch-recv ch-recv
           :connected-uids connected-uids
           :send-fn send-fn
-          :ring-handlers
-          (->WSRingHandlers ajax-post-fn ajax-get-or-ws-handshake-fn)))))
+          :ring-handlers {:get ajax-get-or-ws-handshake-fn
+                          :put ajax-post-fn}
+          ))))
   (stop [component]
     (when ch-recv (async/close! ch-recv))
     (log/info "WebSocket connection stopped")

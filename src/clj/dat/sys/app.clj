@@ -55,41 +55,35 @@
 ;; We handle the bootstrap message by simply sending back the bootstrap data
 (defmethod event-msg-handler :dat.sync.client/bootstrap
   ;; What is send-fn here? Does that wrap the uid for us? (0.o)
-  [{:as app :keys [datomic ws-connection]} {:as event-msg :keys [id uid send-fn]}]
+  [{:as app :keys [datomic remote]} {:as event-msg :keys [id uid send-fn]}]
   (log/info "Sending bootstrap message")
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
+  (protocols/send-event! remote uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
 
 ;; Fallback handler; should send message saying I don't know what you mean
 (defmethod event-msg-handler :default ; Fallback
   [app {:as event-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (log/warn "Unhandled event:" id))
 
-;; ## Works with unified dat.sync.core
-(defmulti server-handler (fn [app {:as segment :keys [id]}] id))
+;; ;; ## Works with unified dat.sync.core
+;; (defmulti server-handler (fn [app {:as segment :keys [id]}] id))
 
-(defmethod server-handler :dat.sync.client/bootstrap
-  [{:keys [ws-connection datomic]} {:as seg :keys [uid]}]
-  (ws/send! ws-connection uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
+;; (defmethod server-handler :dat.sync.client/bootstrap
+;;   [{:keys [remote datomic]} {:as seg :keys [uid]}]
+;;   (protocols/send-event! remote uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
 
-(defmethod server-handler :dat.sync.remote/tx
-  [{:keys [world]} {:as seg :keys [?data]}]
-  (async/put! (:in world) {:datoms ?data}))
+;; (defmethod server-handler :dat.sync.remote/tx
+;;   [{:keys [world]} {:as seg :keys [?data]}]
+;;   (async/put! (:in world) {:datoms ?data}))
 
-(defmethod server-handler :default
-  [{:keys []} seg]
-;;   (log/warn "Unhandled event:" id)
-  )
+;; (defmethod server-handler :default
+;;   [{:keys []} seg]
+;; ;;   (log/warn "Unhandled event:" id)
+;;   )
 
-(defmethod server-handler :chsk/ws-ping
-  [_ _]
-  (log/debug "Ping")
-  )
-
-(defn go-rebroadcast-world-txs! [{:keys [ws-connection world]}]
-  (go-loop []
-    (ws/broadcast! ws-connection [:dat.sync.client/recv-remote-tx (async/<! (:in world))])
-    (recur)))
-
+;; (defmethod server-handler :chsk/ws-ping
+;;   [_ _]
+;;   (log/debug "Ping")
+;;   )
 
 ;; ## Transaction report handler
 
@@ -98,29 +92,29 @@
 (def filter-tx-deltas identity)
 
 (defn handle-transaction-report!
-  [ws-connection tx-deltas]
+  [remote tx-deltas]
   ;; This handler is where you would eventually set up subscriptions
   (try
     (let [tx-deltas (filter-tx-deltas tx-deltas)]
-      (ws/broadcast! ws-connection [:dat.sync.client/recv-remote-tx tx-deltas]))
+      (protocols/send-event! remote [:dat.sync.client/recv-remote-tx tx-deltas]))
     (catch Exception e
       (log/error "Failed to send transaction report to clients!")
       (.printStackTrace e))))
 
 ;; ## The actual app component, which starts sente's chsk router and hooks up the msg handler
 
-(defrecord App [config datomic ws-connection sente-stop-fn]
+(defrecord App [config datomic remote sente-stop-fn]
   component/Lifecycle
   (start [component]
     (log/info "Starting websocket router and transaction listener")
     (let [sente-stop-fn (sente/start-chsk-router!
-                          (:ch-recv ws-connection)
+                          (:ch-recv remote)
                           ;(fn [event] (log/info "Just got event:" (with-out-str (clojure.pprint/pprint))))
                           ;; There sould be a way of specifying app-wide middleware here
                           (partial event-msg-handler component))]
       ;; Start our transaction listener
       (go-loop []
-        (handle-transaction-report! ws-connection (async/<!! (:tx-report-chan datomic)))
+        (handle-transaction-report! remote (async/<!! (:tx-report-chan datomic)))
         (recur))
       (assoc component :sente-stop-fn sente-stop-fn)))
   (stop [component]
@@ -140,7 +134,7 @@
 ;; scope in which you
 (comment
   (require 'user)
-  (let [ws-connection (:ws-connection user/system)]
+  (let [remote (:remote user/system)]
     (send-tx!)))
 
 
