@@ -48,9 +48,6 @@
     :app        (component/using
                   (dat.view/new-datview {:dat.view/main views/main})
                   [:remote :dispatcher :datascript])
-;;     :reactor    (component/using
-;;                   (reactor/new-simple-reactor)
-;;                   [:remote :dispatcher :app])
     :datsync    (component/using
                   (dat.sync/new-datsync)
                   [:remote :dispatcher])
@@ -59,11 +56,7 @@
                   {:transactor :datascript
                    :app :app
                    :remote :remote
-                   :dispatcher :dispatcher})
-
-    ;; TODO: connect remote to dispatcher with datsync
-    ;; ???: possibly move some of onyx reactor into :datsync component
-    ))
+                   :dispatcher :dispatcher})))
 
 
 

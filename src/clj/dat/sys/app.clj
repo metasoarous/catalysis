@@ -103,23 +103,21 @@
 
 ;; ## The actual app component, which starts sente's chsk router and hooks up the msg handler
 
-(defrecord App [config datomic remote sente-stop-fn]
+(defrecord App [config datomic remote]
   component/Lifecycle
   (start [component]
     (log/info "Starting websocket router and transaction listener")
-    (let [sente-stop-fn (sente/start-chsk-router!
-                          (:ch-recv remote)
-                          ;(fn [event] (log/info "Just got event:" (with-out-str (clojure.pprint/pprint))))
-                          ;; There sould be a way of specifying app-wide middleware here
-                          (partial event-msg-handler component))]
       ;; Start our transaction listener
       (go-loop []
         (handle-transaction-report! remote (async/<!! (:tx-report-chan datomic)))
         (recur))
-      (assoc component :sente-stop-fn sente-stop-fn)))
+      (go-loop []
+        (let [event (async/<! (protocols/remote-event-chan remote))]
+          (event-msg-handler component event))
+        (recur))
+      component)
   (stop [component]
     (log/debug "Stopping websocket router")
-    (sente-stop-fn)
     component))
 
 (defn new-app []

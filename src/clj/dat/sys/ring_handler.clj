@@ -17,8 +17,8 @@
 (defn main-handler [chsk-handlers fallback-handlers]
   (routes
    (GET  "/"     _   (clojure.java.io/resource "index.html"))
-   (GET  "/chsk" req ((:get chsk-handlers) req))
-   (POST "/chsk" req ((:put chsk-handlers) req))
+   (GET  (:route chsk-handlers) req ((:get chsk-handlers) req))
+   (POST (:route chsk-handlers) req ((:put chsk-handlers) req))
    (GET "*" _ (fallbacks fallback-handlers)) ;; FIXME: should be some sort of ANY
    (route/not-found "<h1>Page not found</h1>")))
 
