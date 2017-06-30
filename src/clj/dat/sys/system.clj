@@ -37,8 +37,8 @@
 ;;                   (dat.sync/new-datsync)
 ;;                   [:remote :dispatcher])
 ;;     :reactor    (component/using
-;;                   (oreactor/new-onyx-reactor)
-;;                   {:transactor :datascript
+;;                   (oreactor/new-onyx-reactor {:server? true})
+;;                   {:transactor :datomic
 ;;                    :app :app
 ;;                    :remote :remote
 ;;                    :dispatcher :dispatcher})

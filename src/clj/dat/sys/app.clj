@@ -64,27 +64,6 @@
   [app {:as event-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (log/warn "Unhandled event:" id))
 
-;; ;; ## Works with unified dat.sync.core
-;; (defmulti server-handler (fn [app {:as segment :keys [id]}] id))
-
-;; (defmethod server-handler :dat.sync.client/bootstrap
-;;   [{:keys [remote datomic]} {:as seg :keys [uid]}]
-;;   (protocols/send-event! remote uid [:dat.sync.client/bootstrap (protocols/bootstrap datomic)]))
-
-;; (defmethod server-handler :dat.sync.remote/tx
-;;   [{:keys [world]} {:as seg :keys [?data]}]
-;;   (async/put! (:in world) {:datoms ?data}))
-
-;; (defmethod server-handler :default
-;;   [{:keys []} seg]
-;; ;;   (log/warn "Unhandled event:" id)
-;;   )
-
-;; (defmethod server-handler :chsk/ws-ping
-;;   [_ _]
-;;   (log/debug "Ping")
-;;   )
-
 ;; ## Transaction report handler
 
 ;; TODO XXX write me to remove any :db/fn values
@@ -94,6 +73,7 @@
 (defn handle-transaction-report!
   [remote tx-deltas]
   ;; This handler is where you would eventually set up subscriptions
+  ;; ***TODO: move to onyx reactor
   (try
     (let [tx-deltas (filter-tx-deltas tx-deltas)]
       (protocols/send-event! remote [:dat.sync.client/recv-remote-tx tx-deltas]))
