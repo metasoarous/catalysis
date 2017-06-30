@@ -3,6 +3,7 @@
             [clojure.core.async :as async :refer [go go-loop]]
             [dat.sys.ws :as ws]
             [dat.sync.core :as dat.sync]
+            [dat.spec.protocols :as protocols]
             [taoensso.timbre :as log :include-macros true]
             [com.stuartsierra.component :as component]
             [slingshot.slingshot :as slingshot :refer [throw+ try+]]
@@ -83,18 +84,23 @@
 
 ;; ## The actual app component, which starts sente's chsk router and hooks up the msg handler
 
-(defrecord App [config datomic remote]
+(defrecord App [config datomic remote dispatcher]
   component/Lifecycle
   (start [component]
     (log/info "Starting websocket router and transaction listener")
-      ;; Start our transaction listener
-      (go-loop []
-        (handle-transaction-report! remote (async/<!! (:tx-report-chan datomic)))
-        (recur))
-      (go-loop []
-        (let [event (async/<! (protocols/remote-event-chan remote))]
-          (event-msg-handler component event))
-        (recur))
+    ;; Start our transaction listener
+    (go-loop []
+      (handle-transaction-report! remote (async/<!! (:tx-report-chan datomic)))
+      (recur))
+;;     (go-loop []
+;;       (let [event (async/<! (protocols/remote-event-chan remote))]
+;;         (event-msg-handler component event))
+;;         (recur))
+    (async/pipeline
+      1
+      (protocols/dispatcher-event-chan dispatcher)
+      identity
+      (protocols/remote-event-chan remote))
       component)
   (stop [component]
     (log/debug "Stopping websocket router")

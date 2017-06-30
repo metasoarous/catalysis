@@ -31,17 +31,17 @@
                                      :routes :routes
                                      :ws-connection :remote})
      :http-server (component/using (server/new-http-server) [:datomic :config :ring-handler]) ;; user.clj depends on :http-server
-     :app (component/using (app/new-app) [:config :remote :datomic]))
+     :app (component/using (app/new-app) [:config :remote :datomic :dispatcher])
 
 ;;     :datsync    (component/using
 ;;                   (dat.sync/new-datsync)
 ;;                   [:remote :dispatcher])
-;;     :reactor    (component/using
-;;                   (oreactor/new-onyx-reactor {:server? true})
-;;                   {:transactor :datomic
-;;                    :app :app
-;;                    :remote :remote
-;;                    :dispatcher :dispatcher})
-   )
+    :reactor    (component/using
+                  (oreactor/new-onyx-reactor {:server? true})
+                  {:transactor :datomic
+                   :app :app
+                   :remote :remote
+                   :dispatcher :dispatcher})
+     ))
   ([] (create-system {})))
 
