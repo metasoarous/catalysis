@@ -90,16 +90,12 @@
     (log/info "Starting websocket router and transaction listener")
     ;; Start our transaction listener
     (go-loop []
-      (handle-transaction-report! remote (async/<!! (:tx-report-chan datomic)))
+      (handle-transaction-report! remote (dat.sync/tx-report-deltas (async/<!! (:tx-report-chan datomic))))
       (recur))
-;;     (go-loop []
-;;       (let [event (async/<! (protocols/remote-event-chan remote))]
-;;         (event-msg-handler component event))
-;;         (recur))
     (async/pipeline
       1
       (protocols/dispatcher-event-chan dispatcher)
-      identity
+      (map #(assoc % :dat.reactor/event :dat.reactor/legacy))
       (protocols/remote-event-chan remote))
       component)
   (stop [component]
