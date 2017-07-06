@@ -8,7 +8,6 @@
             [dat.sys.routes :as routes]
             [dat.reactor.onyx :as oreactor]
             [dat.sys.ring-handler :as handler]
-            [dat.sys.app :as app]
             [dat.sys.import :as import]
             [dat.sync.core :as dat.sync]
             [dat.reactor.dispatcher :as dispatcher]
@@ -30,9 +29,8 @@
                                     {:config :config
                                      :routes :routes
                                      :ws-connection :remote})
-     :http-server (component/using (server/new-http-server) [:datomic :config :ring-handler]) ;; user.clj depends on :http-server
-;;      :app (component/using (app/new-app) [:config :remote :datomic :dispatcher])
-
+     ;; user.clj depends on :http-server
+     :http-server (component/using (server/new-http-server) [:datomic :config :ring-handler])
     :datsync    (component/using
                   (dat.sync/new-datsync-server)
                   {:transactor :datomic

@@ -1,10 +1,8 @@
 (ns dat.sys.import
   (:require [taoensso.timbre :as log :include-macros true]
             [dat.spec.protocols :as protocols]
-            [dat.sys.ws :as ws]
             [clojure.java.io :as io]
-            [com.stuartsierra.component :as component]
-            [dat.sys.app :as app]))
+            [com.stuartsierra.component :as component]))
 
 (defrecord Importer [config datomic]
   component/Lifecycle

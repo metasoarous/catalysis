@@ -6,7 +6,8 @@
             [ring.util.response :as resp]
             [ring.middleware.defaults :refer [site-defaults wrap-defaults]]
             [ring.middleware.resource :refer (wrap-resource)]
-            [dat.sys.ws :as ws]))
+            [dat.spec.protocols :as protocols]
+            ))
 
 (defn fallbacks [handlers]
   (apply routes
@@ -17,8 +18,8 @@
 (defn main-handler [chsk-handlers fallback-handlers]
   (routes
    (GET  "/"     _   (clojure.java.io/resource "index.html"))
-   (GET  (:route chsk-handlers) req ((:get chsk-handlers) req))
-   (POST (:route chsk-handlers) req ((:put chsk-handlers) req))
+   (GET  (protocols/sock-route chsk-handlers) req ((protocols/sock-get chsk-handlers) req))
+   (POST (protocols/sock-route chsk-handlers) req ((protocols/sock-post chsk-handlers) req))
    (GET "*" _ (fallbacks fallback-handlers)) ;; FIXME: should be some sort of ANY
    (route/not-found "<h1>Page not found</h1>")))
 
@@ -39,8 +40,7 @@
   (start [component]
       component
       (let [component (component/stop component)
-            {:keys [ajax-post-fn ajax-get-or-ws-handshake-fn]} (ws/ring-handlers ws-connection)
-            handler (app (main-handler (:ring-handlers ws-connection) (:handlers routes)))]
+            handler (app (main-handler ws-connection (:handlers routes)))]
         (assoc component :handler handler)))
   (stop [component]
     (assoc component :handler nil)))
