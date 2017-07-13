@@ -13,8 +13,8 @@
    ["project.clj" (helpers/render "project.clj" data)]
    [".gitignore" (helpers/render ".gitignore" data)]
    ["dev/clj/user.clj" (helpers/render "dev/clj/user.clj" data)]
-   ["dev/clj/{{ns-name}}/figwheel_server.clj" (helpers/render "dev/clj/figwheel_server.clj" data)]
-   ["dev/cljs/{{ns-name}}/start.cljs" (helpers/render "dev/cljs/start.cljs" data)]
+   ["dev/clj/{{sanitized}}/figwheel_server.clj" (helpers/render "dev/clj/figwheel_server.clj" data)]
+   ["dev/cljs/{{sanitized}}/start.cljs" (helpers/render "dev/cljs/start.cljs" data)]
 
    ["resources/index.html" (helpers/render "resources/index.html" data)]
    ["resources/schema.edn" (helpers/render "resources/schema.edn" data)]
