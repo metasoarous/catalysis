@@ -5,6 +5,7 @@
             [dat.reactor :as reactor]
             [dat.reactor.onyx :as oreactor]
             [dat.remote]
+            [dat.view.dom :as dom]
             [dat.sys.db :as db]
             [dat.remote.impl.sente :as sente]
             [dat.sync.core :as dat.sync]
@@ -22,22 +23,6 @@
 
 ;; ## The default system
 
-(defn new-system-deprecated []
-  (-> (component/system-map
-        :remote     (sente/new-sente-remote)
-        ;; This should eventually be optional/defaulted
-        :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
-        :app        (component/using
-                      ;; Should also be able to specify your own conn here, though one will be created for you
-                      (dat.view/new-datview {:dat.view/main views/main})
-                      [:remote :dispatcher])
-        :reactor    (component/using
-                      (reactor/new-simple-reactor)
-                      [:remote :dispatcher :app])
-        :datsync    (component/using
-                      (dat.sync/new-datsync)
-                      [:remote :dispatcher]))))
-
 (defn new-system []
   (component/system-map
     :datascript (component/using
@@ -49,14 +34,18 @@
                   (dat.view/new-datview {:dat.view/main views/main})
                   [:remote :dispatcher :datascript])
     :datsync    (component/using
-                  (dat.sync/new-datsync)
+                  (dat.sync/new-datsync-client)
                   [:remote :dispatcher])
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
                   {:transactor :datascript
                    :app :app
                    :remote :remote
-                   :dispatcher :dispatcher})))
+                   :dispatcher :dispatcher})
+;;     :dom (component/using
+;;            (dom/new-reagent-dom)
+;;            [:reactor])
+    ))
 
 
 

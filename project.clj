@@ -32,6 +32,9 @@
                  [posh "0.5.5"]
                  [data-frisk-reagent "0.3.5"]
                  [reagent "0.6.0"]
+;;                  [rum "0.10.8"]
+;;                  [cljsjs/react-dom "15.6.1-0"] ;; for rum. needs exclusions for reagent if using also cljsjs/react and cljsjs/react-dom-server
+;; https://github.com/reagent-project/reagent/issues/275
                  [org.webjars/bootstrap "3.3.5"]
                  [re-com "0.8.3"]
                  [prismatic/schema "1.1.3"]

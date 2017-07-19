@@ -40,7 +40,7 @@
     :reactor    (component/using
                   (oreactor/new-onyx-reactor {:server? true})
                   {:transactor :datomic
-                   :app :datsync ;; FIXME: shouldn't be this way. pass conn differently. as a remote maybe?
+                   :app :datsync ;; FIXME: shouldn't be this way.
                    :remote :remote
                    :dispatcher :dispatcher})
      ))

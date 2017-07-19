@@ -53,6 +53,17 @@
     (assoc component
       :tx-report-chan nil
       :conn nil))
+  protocols/Wire
+  (send-chan [c]
+    ;; TODO: set up go block for transactions {:keys [txs]}
+    nil)
+  (recv-chan [c]
+    tx-report-chan)
+  protocols/EventState
+  (snapshot [component] (protocols/bootstrap component))
+  (snapshot [component at] (protocols/bootstrap component))
+  (events [component from] nil)
+  (events [component from to] nil)
   protocols/PTransactor
   (transact! [component txs]
     (ds/transact! conn txs))
@@ -90,6 +101,17 @@
     (assoc component
       :conn nil
       :tx-report-chan nil))
+  protocols/Wire
+  (send-chan [c]
+    ;; TODO: set up go block for transactions {:keys [txs]}
+    nil)
+  (recv-chan [c]
+    tx-report-chan)
+  protocols/EventState
+  (snapshot [component] (protocols/bootstrap component))
+  (snapshot [component at] (protocols/bootstrap component))
+  (events [component from] nil)
+  (events [component from to] nil)
   protocols/PTransactor
   (transact! [component txs]
     (dapi/transact conn txs))

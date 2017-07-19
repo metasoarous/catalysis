@@ -14,6 +14,16 @@
       (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
   )
 
+;; ???:
+;; (defn pipeline [xf]
+;;   (fn [[S peer [in> out>]]]
+;;     (let [pipe-in> (async/chan 1 xf)]
+;;       (go-loop-try []
+;;         (let [in (superv/<? S in>)]
+;;           (superv/>? S pipe-in> in))
+;;         (recur))
+;;       [S peer [pipe-in> out>]])))
+
 ;; server peer code
 (defn pong-middleware [[S peer [in out]]]
   (let [new-in (chan)
