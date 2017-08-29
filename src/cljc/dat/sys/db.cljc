@@ -16,6 +16,60 @@
             [com.stuartsierra.component :as component]
             ))
 
+;; (defn pull [{:as kb :keys [api db]} pull-expr eid]
+;;   ((:pull api) db pull-expr eid))
+
+;; (defn pull-many [{:as kb :keys [api db]} pull-expr eids]
+;;   ((:pull-many api) db pull-expr eids))
+
+;; (defn q [q-expr {:as kb :keys [api db]} & inputs]
+;;   ;; ???: check :in for extra dbs and rulesets
+;;   (apply (:q api) q-espr db inputs))
+
+;; (defn entity [{:as kb :keys [api db]} eid]
+;;   ((:entity api) db eid))
+
+;; (defn with [{:as kb :keys [api db]} txs]
+;;   ((:with api) db txs))
+
+;; (defn transact! [{:as kb :keys [api conn]} txs]
+;;   ((:transact! api) conn txs))
+
+;; (defn listen! [{:as kb :keys [api]} & args]
+;;   ;; ???: protocol instead
+;;   (apply (:listen! api) args))
+
+;; (defn filter* [{:as kb :keys [api db]} & args]
+;;   ;; TODO: change to name filter, fix clash with clojure.core
+;;   (apply (:filter api) db args))
+
+;; #?(:clj
+;; (defn datomic-listen! [& args]
+;;   (throw "listen! not implemented in datomic yet")))
+
+;; (def datascript-api
+;;   {:pull ds/pull
+;;    :pull-many ds/pull-many
+;;    :q ds/q
+;;    :with ds/with
+;;    :entity ds/entity
+;;    :transact! ds/transact!
+;;    :listen! ds/listen!})
+
+;; #?(:clj
+;; (def datomic-api
+;;   {:pull dapi/pull
+;;    :pull-many dapi/pull-many
+;;    :q dapi/q
+;;    :with dapi/with
+;;    :entity dapi/entity
+;;    :transact! #(deref (apply dapi/transact %&))
+;;    :listen! datomic-listen!}))
+
+
+
+
+
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -37,8 +91,14 @@
    component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
-          base-schema (deep-merge {:db/ident {:db/ident :db/ident :db/unique :db.unique/identity}
-                                   :dat.sync.remote.db/id {:db/unique :db.unique/identity}}
+          base-schema (deep-merge {:db/ident {:db/unique :db.unique/identity}
+                                   :dat.sync/uuident {:db/unique :db.unique/identity}
+                                   :db/cardinality {:db/valueType :db.type/ref}
+                                   :db/valueType {:db/valueType :db.type/ref}
+                                   :db/unique {:db/valueType :db.type/ref}
+                                   :e/type {:db/valueType :db.type/ref}
+                                   :dat.sync.remote.db/id {:db/unique :db.unique/identity} ;; DEPRECATED: TODO:
+                                   }
                                   (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
           conn (or conn (ds/create-conn base-schema))
           tx-report-chan (or tx-report-chan (async/chan))]
@@ -47,6 +107,10 @@
         (ds/listen! conn ::tx-report #(async/put! tx-report-chan %)))
       (assoc component
         :tx-report-chan tx-report-chan
+        :q ds/q
+        :pull ds/pull
+        :entity ds/entity
+        :db deref
         :conn conn)))
   (stop [component]
     (ds/unlisten! conn ::tx-report)
@@ -67,6 +131,8 @@
   protocols/PTransactor
   (transact! [component txs]
     (ds/transact! conn txs))
+  (transact! [component txs tx-meta]
+    (ds/transact! conn txs tx-meta))
   (bootstrap [component]
     ;;(dat.sync/datom><gdatom conn)
     (ds/datoms @conn :eavt))
@@ -77,7 +143,7 @@
   (map->DatascriptDB {}))
 
 #?(:clj
-(defrecord DatomicDB [config conn tx-report-chan]
+(defrecord DatomicDB [config conn tx-report-chan q pull entity db]
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -89,6 +155,10 @@
           tx-report-queue (dapi/tx-report-queue conn)
           component (assoc component
                       :conn conn
+                      :q dapi/q
+                      :pull dapi/pull
+                      :entity dapi/entity
+                      :db dapi/db
                       :tx-report-chan tx-report-chan)]
       ;; XXX Should be a little smarter here and actually test to see if the schema is in place, then transact
       ;; if it isn't. Similarly when we get more robust migrations.
@@ -115,19 +185,46 @@
   protocols/PTransactor
   (transact! [component txs]
     (dapi/transact conn txs))
+  (transact! [component txs tx-meta]
+    ;; ???: can datomic have meta?
+    (dapi/transact conn txs))
   (bootstrap [component]
-    (let [db (dapi/db conn)]
+    (let [db (dapi/db conn)
+          db-fns (into
+                   #{}
+                  (dapi/q '[:find [?fn ...]
+                           :where
+                           [?fn :db/fn]] db))]
           (->> (dapi/datoms db :eavt)
-               (map (fn [[e a v t]] e))
-               (distinct)
-               (dapi/pull-many db '[*])
-               (filter #(not (:db/fn %))))))
+               (remove (fn [[e _ _ _ _]]
+                         (contains? db-fns e))))))
   (tx-report-chan [component]
     tx-report-chan)))
 
 #?(:clj
+(defn bootstrap-deprecated [{:as component :keys [conn]}]
+  (let [db (dapi/db conn)]
+    (->> (dapi/datoms db :eavt)
+         (map (fn [[e a v t]] e))
+         (distinct)
+         (dapi/pull-many db '[*])
+         (filter #(not (:db/fn %)))))))
+
+#?(:clj
 (defn create-datomic []
   (map->DatomicDB {})))
+
+;; ;; ???: ***how do?
+;; (defn db-api [db]
+;;   (cond
+;;     (instance? db DatomicDB) {:q #(dapi/q % (dapi/db conn) %&)
+;;                               :pull (partial dapi/pull (dapi/db conn))
+;;                               :pull-many (partial dapi/pull-many (dapi/db conn))
+;;                               :db #(dapi/db conn)}
+;;     :else {:q ds/q
+;;            :pull ds/}
+;;   "{:keys [q pull pull-many]}" ;; TODO: make an api spec
+;;   (api []))
 
 ;; (defn transform-tx-ids [txf]
 ;;   (fn [db txs]

@@ -9,6 +9,7 @@
                  [org.clojure/clojurescript "1.9.542"]
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/core.match "0.3.0-alpha4"]
+                 [clojure-future-spec "1.9.0-alpha17"]
                  ;[org.clojure/core.typed "0.3.28"] ;; WARNING: 0.3.28 breaks piggieback(!); 0.3.23 known-safe
                  ;; Datsys things
                  [datsync "0.0.1-alpha3"]

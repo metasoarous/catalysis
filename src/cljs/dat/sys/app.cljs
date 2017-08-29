@@ -35,13 +35,14 @@
                   [:remote :dispatcher :datascript])
     :datsync    (component/using
                   (dat.sync/new-datsync-client)
-                  [:remote :dispatcher])
+                  {:transactor :datascript
+                   :datom-api :datascript
+                   :remote :remote
+                   :dispatcher :dispatcher
+                   :reactor :reactor})
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
-                  {:transactor :datascript
-                   :app :app
-                   :remote :remote
-                   :dispatcher :dispatcher})
+                  {:datom-api :datascript})
 ;;     :dom (component/using
 ;;            (dom/new-reagent-dom)
 ;;            [:reactor])
@@ -99,6 +100,7 @@
 ;; dev thing in a separate dev file. For now though...
 (defonce system
   (do
+    (enable-console-print!)
     (log/info "Creating and starting system")
     (component/start (new-system))))
 

@@ -34,13 +34,14 @@
     :datsync    (component/using
                   (dat.sync/new-datsync-server)
                   {:transactor :datomic
-                   :datomic :datomic ;; FIXME: shouldn't be this way
+                   :datom-api :datomic ;; FIXME: shouldn't be this way
                    :remote :remote
-                   :dispatcher :dispatcher})
+                   :dispatcher :dispatcher
+                   :reactor :reactor})
     :reactor    (component/using
-                  (oreactor/new-onyx-reactor {:server? true})
-                  {:transactor :datomic
-                   :app :datsync ;; FIXME: shouldn't be this way.
+                  (oreactor/new-onyx-reactor)
+                  {:datom-api :datomic
+                   ;;:app :datsync ;; FIXME: shouldn't be this way.
                    :remote :remote
                    :dispatcher :dispatcher})
      ))
