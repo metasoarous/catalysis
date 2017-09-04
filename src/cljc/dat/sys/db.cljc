@@ -16,60 +16,114 @@
             [com.stuartsierra.component :as component]
             ))
 
-;; (defn pull [{:as kb :keys [api db]} pull-expr eid]
-;;   ((:pull api) db pull-expr eid))
+;; ;;
+;; ;; From https://github.com/plumatic/schema
+;; ;;
+;; (defn cljs-env?
+;;   "Take the &env from a macro, and tell whether we are expanding into cljs."
+;;   [env]
+;;   (boolean (:ns env)))
 
-;; (defn pull-many [{:as kb :keys [api db]} pull-expr eids]
-;;   ((:pull-many api) db pull-expr eids))
+;; ;;
+;; ;; From https://github.com/plumatic/schema
+;; ;;
+;; #?(:clj
+;; (defmacro if-cljs
+;;   "Return then if we are generating cljs code and else for Clojure code.
+;;    https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"
+;;   [then else]
+;;   (if (cljs-env? &env) then else)))
 
-;; (defn q [q-expr {:as kb :keys [api db]} & inputs]
-;;   ;; ???: check :in for extra dbs and rulesets
-;;   (apply (:q api) q-espr db inputs))
+;; (defn-tx
+;;   {:require }
+;;   [db arg arg]
+;;   (d/q blah blah))
 
-;; (defn entity [{:as kb :keys [api db]} eid]
-;;   ((:entity api) db eid))
+;; #?(:clj
+;; (defmacro defn-tx [sym form & body]
+;;   `(if-cljs
+;;      (defn ~sym ~form ~body)
+;;      (let [binds# (when (vector? ~form) ~form)
+;;            fn-map# (when (map? ~form) ~form)
+;;            body# (if binds# '~@body '~(rest @body))
+;;            binds# (or binds# ~(first @body))
+;;            fn-map# (into
+;;                      {:lang "clojure"
+;;                       :params binds#
+;;                       :code body#}
+;;                      fn-map#)]
+;;        (def ~sym (datomic.api/function fn-map#))))))
 
-;; (defn with [{:as kb :keys [api db]} txs]
-;;   ((:with api) db txs))
+;; (defmacro defn-tx [api {:keys [q pull]}]
+;;   `{:params [db]
+;;     :requires [[dat.sync.datomic :as dat.sync.kb]]
+;;     :lang "clojure"
+;;     :code dat.sync.kb/q
+;;    })
 
-;; (defn transact! [{:as kb :keys [api conn]} txs]
-;;   ((:transact! api) conn txs))
-
-;; (defn listen! [{:as kb :keys [api]} & args]
-;;   ;; ???: protocol instead
-;;   (apply (:listen! api) args))
-
-;; (defn filter* [{:as kb :keys [api db]} & args]
-;;   ;; TODO: change to name filter, fix clash with clojure.core
-;;   (apply (:filter api) db args))
+;; (defn register-fn! [{:as api :keys [transact!]} conn fn-ident fn-spec]
+;;   (transact!
+;;     conn
+;;     [{:db/ident fn-ident
+;;       :db/fn fn-spec
+;;       :db/doc ""
+;;       :db/id #db/id [:db.part/user]
+;;       }
+;;       ]))
 
 ;; #?(:clj
 ;; (defn datomic-listen! [& args]
 ;;   (throw "listen! not implemented in datomic yet")))
 
-;; (def datascript-api
-;;   {:pull ds/pull
-;;    :pull-many ds/pull-many
-;;    :q ds/q
-;;    :with ds/with
-;;    :entity ds/entity
-;;    :transact! ds/transact!
-;;    :listen! ds/listen!})
+(defmacro simple-datomic-fn [fn-key]
+  `{:db/id #db/id [:db.part/user]
+    :db/ident fn-key
+    :db/fn (datomic.api/function
+             '{:lang "clojure"
+               :params [db]
+               :requires [[~(namespace fn-key)]]
+               :code (~(symbol fn-key) db)})
+    ;;     :db/doc ;;TODO:
 
-;; #?(:clj
-;; (def datomic-api
-;;   {:pull dapi/pull
-;;    :pull-many dapi/pull-many
-;;    :q dapi/q
-;;    :with dapi/with
-;;    :entity dapi/entity
-;;    :transact! #(deref (apply dapi/transact %&))
-;;    :listen! datomic-listen!}))
+    })
 
+(def datascript-api
+  {:pull ds/pull
+   :pull-many ds/pull-many
+   :q ds/q
+   :with ds/with
+   :entity ds/entity
+   :transact! ds/transact!
+;;    :listen! ds/listen!
+   })
 
+#?(:clj
+(def datomic-api
+  {:pull dapi/pull
+   :pull-many dapi/pull-many
+   :q dapi/q
+   :with dapi/with
+   :entity dapi/entity
+   :transact! #(deref (apply dapi/transact %&))
+;;    :listen! datomic-listen!
+   }))
 
-
-
+#?(:clj
+(def ensure-composite
+  (dapi/function
+   '{:lang "clojure"
+     :params [db k1 v1 k2 v2]
+     :code (if-let [[e t1 t2] (dapi/q '[:find [?e ?t1 ?t2]
+                                     :in $ ?k1 ?v1 ?k2 ?v2
+                                     :where
+                                     [?e ?k1 ?v1 ?t1]
+                                     [?e ?k2 ?v2 ?t2]]
+                                   db k1 v1 k2 v2)]
+             (throw (ex-info (str "Entity already exists " e)
+                             {:e e :t (dapi/tx->t (max t1 t2))}))
+             [{:db/id (dapi/tempid :db.part/user)
+               k1 v1
+               k2 v2}])})))
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -87,7 +141,7 @@
       (catch Exception e
         (.printStackTrace e))))))
 
-(defrecord DatascriptDB [config conn tx-report-chan]
+(defrecord DatascriptDB [config conn tx-report-chan db api]
    component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -111,12 +165,19 @@
         :pull ds/pull
         :entity ds/entity
         :db deref
+        :api datascript-api
         :conn conn)))
   (stop [component]
     (ds/unlisten! conn ::tx-report)
     (assoc component
       :tx-report-chan nil
       :conn nil))
+;;   #?(:clj clojure.lang.IDeref
+;;      :cljs IDeref)
+;;   (#?(:clj deref :cljs -deref) [this]
+;;          (assoc this
+;;            :conn nil
+;;            :db @conn))
   protocols/Wire
   (send-chan [c]
     ;; TODO: set up go block for transactions {:keys [txs]}
@@ -143,7 +204,7 @@
   (map->DatascriptDB {}))
 
 #?(:clj
-(defrecord DatomicDB [config conn tx-report-chan q pull entity db]
+(defrecord DatomicDB [config conn tx-report-chan q pull entity db api]
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -154,6 +215,7 @@
           conn (or conn (dapi/connect url))
           tx-report-queue (dapi/tx-report-queue conn)
           component (assoc component
+                      :api datomic-api
                       :conn conn
                       :q dapi/q
                       :pull dapi/pull
@@ -163,6 +225,7 @@
       ;; XXX Should be a little smarter here and actually test to see if the schema is in place, then transact
       ;; if it isn't. Similarly when we get more robust migrations.
       (log/info "Datomic Starting")
+      (log/debug "dapi-fn-test: " ensure-composite)
       (when-not listening?
         (ensure-schema! conn)
         (dat.sync/go-tx-report! tx-report-queue tx-report-chan))
@@ -177,6 +240,11 @@
     nil)
   (recv-chan [c]
     tx-report-chan)
+;;   clojure.lang.IDeref
+;;   (deref [this]
+;;          (assoc this
+;;            :conn nil
+;;            :db (dapi/db conn)))
   protocols/EventState
   (snapshot [component] (protocols/bootstrap component))
   (snapshot [component at] (protocols/bootstrap component))

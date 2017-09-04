@@ -17,7 +17,7 @@
                            (dat.sync/uuident-all-the-things*
                              (dapi/db (:conn datomic)))
                            (protocols/snapshot datomic))]
-;;         (log/debug "imported uuidents" uuidents)
+;;         (log/debug "new uuidents" uuidents)
         (protocols/transact!
           datomic
           uuidents))))
