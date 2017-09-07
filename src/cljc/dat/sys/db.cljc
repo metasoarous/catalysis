@@ -164,6 +164,7 @@
         :q ds/q
         :pull ds/pull
         :entity ds/entity
+        :with ds/with
         :db deref
         :api datascript-api
         :conn conn)))
@@ -203,6 +204,12 @@
 (defn create-datascript []
   (map->DatascriptDB {}))
 
+;; ***TODO: deref is not a protocol. what should we do here.
+;; (extend-protocol clojure.lang.IDeref
+;;   datomic.Connection
+;;   (deref [this]
+;;     (dapi/db this)))
+
 #?(:clj
 (defrecord DatomicDB [config conn tx-report-chan q pull entity db api]
   component/Lifecycle
@@ -219,6 +226,7 @@
                       :conn conn
                       :q dapi/q
                       :pull dapi/pull
+                      :with dapi/with
                       :entity dapi/entity
                       :db dapi/db
                       :tx-report-chan tx-report-chan)]
