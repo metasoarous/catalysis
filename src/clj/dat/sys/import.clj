@@ -6,21 +6,20 @@
             [clojure.java.io :as io]
             [com.stuartsierra.component :as component]))
 
-(defrecord Importer [config datomic]
+(defrecord Importer [config knowbase]
   component/Lifecycle
   (start [component]
     (log/info "Importing data")
-    (let [data (-> "resources/test-data.edn" slurp read-string)]
-      (protocols/transact! datomic data)
-      ;; FIXME: this next transaction is written terribly, just trying to get it working for now. It can suffer from race conditions and it's assuming datomic.
+    (let [{:keys [transact! snap]} (:datom-api knowbase)
+          conn (:conn knowbase)
+          data (-> "resources/test-data.edn" slurp read-string)]
+      (transact! conn data)
+      ;; FIXME: this next transaction is written terribly, just trying to get it working for now. It can suffer from race conditions.
       (let [uuidents (into []
-                           (dat.sync/uuident-all-the-things*
-                             (dapi/db (:conn datomic)))
-                           (protocols/snapshot datomic))]
+                           (dat.sync/uuident-all-the-things* (snap conn))
+                             (protocols/snapshot knowbase))]
 ;;         (log/debug "new uuidents" uuidents)
-        (protocols/transact!
-          datomic
-          uuidents))))
+        (transact! conn uuidents))))
   (stop [component]
         component))
 

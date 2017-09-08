@@ -75,55 +75,51 @@
 ;; (defn datomic-listen! [& args]
 ;;   (throw "listen! not implemented in datomic yet")))
 
-(defmacro simple-datomic-fn [fn-key]
-  `{:db/id #db/id [:db.part/user]
-    :db/ident fn-key
-    :db/fn (datomic.api/function
-             '{:lang "clojure"
-               :params [db]
-               :requires [[~(namespace fn-key)]]
-               :code (~(symbol fn-key) db)})
-    ;;     :db/doc ;;TODO:
+;; (defmacro simple-datomic-fn [fn-key]
+;;   `{:db/id #db/id [:db.part/user]
+;;     :db/ident fn-key
+;;     :db/fn (datomic.api/function
+;;              '{:lang "clojure"
+;;                :params [db]
+;;                :requires [[~(namespace fn-key)]]
+;;                :code (~(symbol fn-key) db)})
+;;     ;;     :db/doc ;;TODO:
 
-    })
+;;     })
+
+(defrecord DatomAPI [pull pull-many q with entity transact! snap])
 
 (def datascript-api
+  (map->DatomAPI
   {:pull ds/pull
    :pull-many ds/pull-many
    :q ds/q
    :with ds/with
    :entity ds/entity
    :transact! ds/transact!
+   :snap deref
 ;;    :listen! ds/listen!
-   })
+   }))
+
+#?(:clj
+(defn datomic-transact!
+  ([conn txs]
+   (datomic-transact! conn txs nil))
+  ([conn txs tx-meta]
+   @(dapi/transact conn txs))))
 
 #?(:clj
 (def datomic-api
+  (map->DatomAPI
   {:pull dapi/pull
    :pull-many dapi/pull-many
    :q dapi/q
    :with dapi/with
    :entity dapi/entity
-   :transact! #(deref (apply dapi/transact %&))
+   :transact! datomic-transact!
+   :snap dapi/db
 ;;    :listen! datomic-listen!
-   }))
-
-#?(:clj
-(def ensure-composite
-  (dapi/function
-   '{:lang "clojure"
-     :params [db k1 v1 k2 v2]
-     :code (if-let [[e t1 t2] (dapi/q '[:find [?e ?t1 ?t2]
-                                     :in $ ?k1 ?v1 ?k2 ?v2
-                                     :where
-                                     [?e ?k1 ?v1 ?t1]
-                                     [?e ?k2 ?v2 ?t2]]
-                                   db k1 v1 k2 v2)]
-             (throw (ex-info (str "Entity already exists " e)
-                             {:e e :t (dapi/tx->t (max t1 t2))}))
-             [{:db/id (dapi/tempid :db.part/user)
-               k1 v1
-               k2 v2}])})))
+   })))
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -141,10 +137,11 @@
       (catch Exception e
         (.printStackTrace e))))))
 
-(defrecord DatascriptDB [config conn tx-report-chan db api]
+(defrecord DatascriptDB [config conn tx-report-chan datom-api]
    component/Lifecycle
   (start [component]
-    (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
+    (let [datom-api (or datom-api datascript-api)
+          listening? conn ;; FIXME: assumes conn will never be fed in from ss system
           base-schema (deep-merge {:db/ident {:db/unique :db.unique/identity}
                                    :dat.sync/uuident {:db/unique :db.unique/identity}
                                    :db/cardinality {:db/valueType :db.type/ref}
@@ -161,24 +158,13 @@
         (ds/listen! conn ::tx-report #(async/put! tx-report-chan %)))
       (assoc component
         :tx-report-chan tx-report-chan
-        :q ds/q
-        :pull ds/pull
-        :entity ds/entity
-        :with ds/with
-        :db deref
-        :api datascript-api
+        :datom-api datascript-api
         :conn conn)))
   (stop [component]
     (ds/unlisten! conn ::tx-report)
     (assoc component
       :tx-report-chan nil
       :conn nil))
-;;   #?(:clj clojure.lang.IDeref
-;;      :cljs IDeref)
-;;   (#?(:clj deref :cljs -deref) [this]
-;;          (assoc this
-;;            :conn nil
-;;            :db @conn))
   protocols/Wire
   (send-chan [c]
     ;; TODO: set up go block for transactions {:keys [txs]}
@@ -186,32 +172,19 @@
   (recv-chan [c]
     tx-report-chan)
   protocols/EventState
-  (snapshot [component] (protocols/bootstrap component))
-  (snapshot [component at] (protocols/bootstrap component))
-  (events [component from] nil)
-  (events [component from to] nil)
-  protocols/PTransactor
-  (transact! [component txs]
-    (ds/transact! conn txs))
-  (transact! [component txs tx-meta]
-    (ds/transact! conn txs tx-meta))
-  (bootstrap [component]
-    ;;(dat.sync/datom><gdatom conn)
+  (snapshot [component at]
+    ;; TODO: support 'at
+    (protocols/snapshot component))
+  (snapshot [component]
     (ds/datoms @conn :eavt))
-  (tx-report-chan [component]
-    tx-report-chan))
+  (events [component from] nil)
+  (events [component from to] nil))
 
 (defn create-datascript []
   (map->DatascriptDB {}))
 
-;; ***TODO: deref is not a protocol. what should we do here.
-;; (extend-protocol clojure.lang.IDeref
-;;   datomic.Connection
-;;   (deref [this]
-;;     (dapi/db this)))
-
 #?(:clj
-(defrecord DatomicDB [config conn tx-report-chan q pull entity db api]
+(defrecord DatomicDB [config conn tx-report-chan datom-api]
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -222,18 +195,12 @@
           conn (or conn (dapi/connect url))
           tx-report-queue (dapi/tx-report-queue conn)
           component (assoc component
-                      :api datomic-api
+                      :datom-api datomic-api
                       :conn conn
-                      :q dapi/q
-                      :pull dapi/pull
-                      :with dapi/with
-                      :entity dapi/entity
-                      :db dapi/db
                       :tx-report-chan tx-report-chan)]
       ;; XXX Should be a little smarter here and actually test to see if the schema is in place, then transact
       ;; if it isn't. Similarly when we get more robust migrations.
       (log/info "Datomic Starting")
-      (log/debug "dapi-fn-test: " ensure-composite)
       (when-not listening?
         (ensure-schema! conn)
         (dat.sync/go-tx-report! tx-report-queue tx-report-chan))
@@ -248,23 +215,11 @@
     nil)
   (recv-chan [c]
     tx-report-chan)
-;;   clojure.lang.IDeref
-;;   (deref [this]
-;;          (assoc this
-;;            :conn nil
-;;            :db (dapi/db conn)))
   protocols/EventState
-  (snapshot [component] (protocols/bootstrap component))
-  (snapshot [component at] (protocols/bootstrap component))
-  (events [component from] nil)
-  (events [component from to] nil)
-  protocols/PTransactor
-  (transact! [component txs]
-    (dapi/transact conn txs))
-  (transact! [component txs tx-meta]
-    ;; ???: can datomic have meta?
-    (dapi/transact conn txs))
-  (bootstrap [component]
+  (snapshot [component at]
+    ;; TODO: support for 'at
+    (protocols/snapshot component))
+  (snapshot [component]
     (let [db (dapi/db conn)
           db-fns (into
                    #{}
@@ -274,8 +229,8 @@
           (->> (dapi/datoms db :eavt)
                (remove (fn [[e _ _ _ _]]
                          (contains? db-fns e))))))
-  (tx-report-chan [component]
-    tx-report-chan)))
+  (events [component from] nil)
+  (events [component from to] nil)))
 
 #?(:clj
 (defn bootstrap-deprecated [{:as component :keys [conn]}]

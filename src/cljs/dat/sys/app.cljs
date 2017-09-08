@@ -35,14 +35,13 @@
                   [:remote :dispatcher :datascript])
     :datsync    (component/using
                   (dat.sync/new-datsync-client)
-                  {:transactor :datascript
-                   :datom-api :datascript
+                  {:knowbase :datascript
                    :remote :remote
                    :dispatcher :dispatcher
                    :reactor :reactor})
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
-                  {:datom-api :datascript})
+                  [])
 ;;     :dom (component/using
 ;;            (dom/new-reagent-dom)
 ;;            [:reactor])

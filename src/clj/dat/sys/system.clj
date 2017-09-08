@@ -23,7 +23,9 @@
      :datomic (component/using
                 (db/create-datomic) [:config])
      :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
-     :importer (component/using (import/new-importer) [:config :datomic])
+     :importer (component/using (import/new-importer)
+                                {:config :config
+                                 :knowbase :datomic})
      :routes (component/using (routes/new-routes) [:config])
      :ring-handler (component/using (handler/new-ring-handler)
                                     {:config :config
@@ -33,17 +35,13 @@
      :http-server (component/using (server/new-http-server) [:datomic :config :ring-handler])
     :datsync    (component/using
                   (dat.sync/new-datsync-server)
-                  {:transactor :datomic
-                   :datom-api :datomic ;; FIXME: shouldn't be this way
+                  {:knowbase :datomic
                    :remote :remote
                    :dispatcher :dispatcher
                    :reactor :reactor})
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
-                  {:datom-api :datomic
-                   ;;:app :datsync ;; FIXME: shouldn't be this way.
-                   :remote :remote
-                   :dispatcher :dispatcher})
+                  [:remote :dispatcher])
      ))
   ([] (create-system {})))
 
