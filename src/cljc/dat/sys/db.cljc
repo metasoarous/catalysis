@@ -4,18 +4,20 @@
                 :cljs [[cljs.core.async :as async]])
             [taoensso.timbre :as log :include-macros true]
 
-;;             [taoensso.nippy :as nippy]
             [dat.sync.core :as dat.sync]
             [datascript.core :as ds]
             [dat.view]
             [dat.spec.protocols :as protocols]
             [dat.sys.utils :refer [deep-merge cat-into]]
             [com.rpl.specter :as specter]
+            #?(:clj [taoensso.nippy :as nippy])
             #?(:clj [clojure.java.io :as io])
             #?(:clj [io.rkn.conformity :as conformity])
             #?(:clj [datomic.api :as dapi])
             [com.stuartsierra.component :as component]
-            ))
+            )
+  #?(:clj
+      (:import [java.io DataInputStream DataOutputStream])))
 
 ;; ;;
 ;; ;; From https://github.com/plumatic/schema
@@ -500,18 +502,34 @@
           txs))))))
 
 #?(:clj
+(defn db-persister [url]
+  (fn [{:as report :keys [db-after]}]
+    (with-open [out (clojure.java.io/output-stream url)]
+        (nippy/freeze-to-out! (DataOutputStream. out) {:datoms (ds/datoms db-after :eavt)
+                                                       :schema (:schema db-after)})))))
+
+#?(:clj
 (defrecord PersistentDatascriptDB [config conn tx-report-chan datom-api]
    component/Lifecycle
   (start [component]
-    (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
+    (let [url "resources/persistent-datomic.bytes";;(-> config :persistent-datascript :url)
+          listening? conn ;; FIXME: assumes conn will never be fed in from ss system
           base-schema (deep-merge bare-bones-schema
                                   (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
           conn (or conn (ds/create-conn base-schema))
           tx-report-chan (or tx-report-chan (async/chan))]
       (ensure-schema-datascript! conn)
+      (try
+        (with-open [in (io/input-stream url)]
+          (let [{:keys [datoms schema]} (nippy/thaw-from-in! (DataInputStream. in))]
+            (when datoms
+              (reset! conn (ds/init-db datoms schema)))))
+        (catch Exception e))
+
       (when-not listening?
         ;; ???: is this check already done in ds/listen!
-        (ds/listen! conn ::tx-report #(async/put! tx-report-chan %)))
+        (ds/listen! conn ::tx-report #(async/put! tx-report-chan %))
+        (ds/listen! conn ::persist (db-persister url)))
       (assoc component
         :tx-report-chan tx-report-chan
         :datom-api persistent-datascript-api
