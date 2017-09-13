@@ -19,13 +19,15 @@
    (component/system-map
      :remote (sente/new-sente-remote {:server? true})
      :config (config/create-config config-overrides)
-;;      :datomic (component/using (datomic/create-persistent-datascript) [:config])
-     :datomic (component/using
-                (db/create-datomic) [:config])
+     :datomic (component/using (db/create-persistent-datascript) [:config])
+;;      :datomic (component/using
+;;                 (db/create-datomic) [:config])
      :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
      :importer (component/using (import/new-importer)
                                 {:config :config
-                                 :knowbase :datomic})
+                                 :knowbase :datomic
+;;                               :datomic? true ;; FIXME: hack
+                                 })
      :routes (component/using (routes/new-routes) [:config])
      :ring-handler (component/using (handler/new-ring-handler)
                                     {:config :config

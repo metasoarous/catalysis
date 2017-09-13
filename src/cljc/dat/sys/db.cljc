@@ -7,9 +7,10 @@
 ;;             [taoensso.nippy :as nippy]
             [dat.sync.core :as dat.sync]
             [datascript.core :as ds]
+            [dat.view]
             [dat.spec.protocols :as protocols]
             [dat.sys.utils :refer [deep-merge cat-into]]
-;;             [com.rpl.specter :as specter]
+            [com.rpl.specter :as specter]
             #?(:clj [clojure.java.io :as io])
             #?(:clj [io.rkn.conformity :as conformity])
             #?(:clj [datomic.api :as dapi])
@@ -140,8 +141,7 @@
 (defrecord DatascriptDB [config conn tx-report-chan datom-api]
    component/Lifecycle
   (start [component]
-    (let [datom-api (or datom-api datascript-api)
-          listening? conn ;; FIXME: assumes conn will never be fed in from ss system
+    (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
           base-schema (deep-merge {:db/ident {:db/unique :db.unique/identity}
                                    :dat.sync/uuident {:db/unique :db.unique/identity}
                                    :db/cardinality {:db/valueType :db.type/ref}
@@ -245,18 +245,6 @@
 (defn create-datomic []
   (map->DatomicDB {})))
 
-;; ;; ???: ***how do?
-;; (defn db-api [db]
-;;   (cond
-;;     (instance? db DatomicDB) {:q #(dapi/q % (dapi/db conn) %&)
-;;                               :pull (partial dapi/pull (dapi/db conn))
-;;                               :pull-many (partial dapi/pull-many (dapi/db conn))
-;;                               :db #(dapi/db conn)}
-;;     :else {:q ds/q
-;;            :pull ds/}
-;;   "{:keys [q pull pull-many]}" ;; TODO: make an api spec
-;;   (api []))
-
 ;; (defn transform-tx-ids [txf]
 ;;   (fn [db txs]
 ;;     ;; FIXME: handle partitions
@@ -266,6 +254,13 @@
 ;;                       txs)]
 ;;       (log/debug "with temp eids" txs-after)
 ;;       (txf db txs-after))))
+(defn datomic-tempids->ints [txs]
+  ;; TODO: handle datomic partitions
+  (let [txs-after (specter/transform
+                    (specter/walker #(instance? datomic.db.DbId %))
+                    #(:idx %)
+                    txs)]
+    txs-after))
 
 ;; (defn no-attribute-install [txf]
 ;;   (fn [db txs]
@@ -376,6 +371,174 @@
 ;;     (assoc component
 ;;       :conn nil
 ;;       :tx-report-chan nil)))
+
+(def bare-bones-schema
+  {:db/ident {:db/unique :db.unique/identity}
+   :db/cardinality {:db/valueType :db.type/ref}
+   :db/valueType {:db/valueType :db.type/ref}
+   :db/unique {:db/valueType :db.type/ref}
+
+   ;; ???: can :e/type be in just transactions now?
+   :e/type {:db/valueType :db.type/ref}
+   :dat.sync/uuident {:db/unique :db.unique/identity}
+   })
+
+(def enum-idents
+  [{:db/ident :db.cardinality/many}
+   {:db/ident :db.cardinality/one}
+   {:db/ident :db.unique/identity}
+   {:db/ident :db.unique/value}
+   {:db/ident :db.type/keyword}
+   {:db/ident :db.type/string}
+   {:db/ident :db.type/boolean}
+   {:db/ident :db.type/long}
+   {:db/ident :db.type/bigint}
+   {:db/ident :db.type/float}
+   {:db/ident :db.type/double}
+   {:db/ident :db.type/bigdec}
+   {:db/ident :db.type/ref}
+   {:db/ident :db.type/instant}
+   {:db/ident :db.type/uuid}
+   {:db/ident :db.type/uri}
+   {:db/ident :db.type/bytes}])
+
+(def schema-idents
+  [{:db/ident :db/ident
+    :db/valueType :db.type/keyword
+    :db/unique :db.unique/identity}
+   {:db/ident :db/cardinality
+    :db/valueType :db.type/ref}
+   {:db/ident :db/unique
+    :db/valueType :db.type/ref}
+   {:db/ident :db/valueType
+    :db/valueType :db.type/ref}
+   {:db/ident :db/doc
+    :db/valueType :db.type/string}
+   {:db/ident :db/index
+    :db/valueType :db.type/boolean}
+   {:db/ident :db/fulltext
+    :db/valueType :db.type/boolean}
+   {:db/ident :db/isComponent
+    :db/valueType :db.type/boolean}
+   {:db/ident :db/noHistory
+    :db/valueType :db.type/boolean}
+
+   {:db/ident :db.install/attribute
+    :db/valueType :db.type/ref}
+   {:db/ident :db.alter/attribute
+    :db/valueType :db.type/ref}
+   {:db/ident :db.install/partition
+    :db/valueType :db.type/ref}
+   {:db/ident :db.part/db}
+   {:db/ident :db.part/user}
+   {:db/ident :db.part/tx}
+   ])
+
+(def datsync-idents
+  ;; FIXME: get from datsync
+  [{:db/ident :e/type
+    :db/valueType :db.type/ref}
+   {:db/ident :dat.sync/uuident
+    :db/unique :db.unique/identity}])
+
+(defn attr-ref-middleware [transact]
+  (fn [{:as report :keys [db-after]} txs]
+    (let [txs (datomic-tempids->ints txs)]
+;;       (log/debug "txs-post-id" txs)
+      ;; ***???: attr-refs become [:db/ident keyword?]. testing implementation in datascript
+      (transact report txs))))
+
+;; (def identing-meta
+;;   {:datascript.db/tx-middleware
+;;    (comp
+;;      attr-ref-middleware
+;;      datascript.db/schema-middleware)})
+
+(defn persistent-datascript-transact!
+  ([conn txs] (persistent-datascript-transact! conn txs nil))
+  ([conn txs {:as tx-meta :keys [datascript.db/tx-middleware]}]
+   (ds/transact! conn txs
+    (assoc
+      (or tx-meta {})
+      :datascript.db/tx-middleware
+      (comp
+        attr-ref-middleware
+        (or tx-middleware identity)
+        dat.sync/uuident-all-the-things
+        datascript.db/schema-middleware)))))
+
+(def persistent-datascript-api
+  (map->DatomAPI
+  {:pull ds/pull
+   :pull-many ds/pull-many
+   :q ds/q
+   :with ds/with
+   :entity ds/entity
+   :transact! persistent-datascript-transact!
+   :snap deref
+;;    :listen! ds/listen!
+   }))
+
+#?(:clj
+(defn ensure-schema-datascript!
+  [conn]
+  ;; FIXME: :db.install/attribute needs to be a :db.type/ref
+  (let [schema-data (merge dat.view/base-schema
+                           (-> "schema.edn" io/resource slurp read-string))
+        ;; FIXME: conformity unavailable so using hardcoded schema loading
+        dat-view-schema-txes (get-in schema-data [:dat.view/base-schema :txes])
+        dat-sys-schema-txes (get-in schema-data [:catalysis/base-schema :txes])
+        txes (cat-into
+                [enum-idents schema-idents]
+               dat-view-schema-txes
+               dat-sys-schema-txes)]
+    (doseq [txs txes]
+      (do
+;;         (log/debug "ensuring txs: " txs)
+        (persistent-datascript-transact!
+          conn
+          txs))))))
+
+#?(:clj
+(defrecord PersistentDatascriptDB [config conn tx-report-chan datom-api]
+   component/Lifecycle
+  (start [component]
+    (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
+          base-schema (deep-merge bare-bones-schema
+                                  (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
+          conn (or conn (ds/create-conn base-schema))
+          tx-report-chan (or tx-report-chan (async/chan))]
+      (ensure-schema-datascript! conn)
+      (when-not listening?
+        ;; ???: is this check already done in ds/listen!
+        (ds/listen! conn ::tx-report #(async/put! tx-report-chan %)))
+      (assoc component
+        :tx-report-chan tx-report-chan
+        :datom-api persistent-datascript-api
+        :conn conn)))
+  (stop [component]
+    (ds/unlisten! conn ::tx-report)
+    (assoc component
+      :tx-report-chan nil
+      :conn nil))
+  protocols/Wire
+  (send-chan [c]
+    ;; TODO: set up go block for transactions {:keys [txs]}
+    nil)
+  (recv-chan [c]
+    tx-report-chan)
+  protocols/EventState
+  (snapshot [component at]
+    ;; TODO: support 'at
+    (protocols/snapshot component))
+  (snapshot [component]
+    (ds/datoms @conn :eavt))
+  (events [component from] nil)
+  (events [component from to] nil)))
+
+#?(:clj
+(defn create-persistent-datascript []
+  (map->PersistentDatascriptDB {})))
 
 
 
