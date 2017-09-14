@@ -1,19 +1,28 @@
 (ns dat.sys.import
   (:require [taoensso.timbre :as log :include-macros true]
-            [datomic.api :as d]
-            [dat.sys.ws :as ws]
+            [dat.spec.protocols :as protocols]
+            [dat.sync.core :as dat.sync]
+            [datomic.api :as dapi]
             [clojure.java.io :as io]
-            [com.stuartsierra.component :as component]
-            [dat.sys.app :as app]))
+            [com.stuartsierra.component :as component]))
 
-(defrecord Importer [config datomic]
+(defrecord Importer [config knowbase datomic?]
   component/Lifecycle
   (start [component]
-    (log/info "Importing data")
-    (let [data (-> "resources/test-data.edn" slurp read-string)]
-      @(d/transact (:conn datomic) data)))
+    (log/info "Importing data" (:transact! (:datom-api knowbase)))
+    (let [{:keys [transact! snap]} (:datom-api knowbase)
+          conn (:conn knowbase)
+          data (-> "resources/test-data.edn" slurp read-string)]
+      (transact! conn data)
+      ;; FIXME: this next transaction is written terribly, just trying to get it working for now. It can suffer from race conditions.
+      (when datomic?
+        (let [uuidents (into []
+                             (dat.sync/uuident-all-the-things* (snap conn))
+                             (protocols/snapshot knowbase))]
+          ;;         (log/debug "new uuidents" uuidents)
+          (transact! conn uuidents)))))
   (stop [component]
-       component))
+        component))
 
 
 (defn new-importer []
