@@ -247,15 +247,6 @@
 (defn create-datomic []
   (map->DatomicDB {})))
 
-;; (defn transform-tx-ids [txf]
-;;   (fn [db txs]
-;;     ;; FIXME: handle partitions
-;;     (let [txs-after (specter/transform
-;;                       (specter/walker #(instance? datomic.db.DbId %))
-;;                       #(:idx %)
-;;                       txs)]
-;;       (log/debug "with temp eids" txs-after)
-;;       (txf db txs-after))))
 (defn datomic-tempids->ints [txs]
   ;; TODO: handle datomic partitions
   (let [txs-after (specter/transform
@@ -263,116 +254,6 @@
                     #(:idx %)
                     txs)]
     txs-after))
-
-;; (defn no-attribute-install [txf]
-;;   (fn [db txs]
-;;     (let [txs-after
-;;           (specter/transform
-;;             [specter/ALL map?]
-;;             #(dissoc % :db.install/_attribute :db.alter/_attribute)
-;;             txs)]
-;; ;;       (log/debug "no-attr" txs-after)
-;;     (txf db txs-after))))
-
-;; (defn attr-as-ident [txf]
-;;   (fn [db txs]
-;;     (let [txs-after
-;;           (specter/transform
-;;             [specter/ALL vector? (specter/keypath 1) keyword?]
-;;             (fn [ident-attr]
-;;               [:db/ident ident-attr])
-;;             txs)]
-;;       (log/debug "idents-after" txs-after)
-;;       (txf db txs-after))))
-
-;; (defn e-attr-as-ident [txf]
-;;   (fn [db txs]
-;;     (let [txs-after
-;;           (specter/transform
-;;             [specter/ALL map? #(contains? % :e.type/attributes) :e.type/attributes specter/ALL keyword?]
-;;             (fn [ident-attr]
-;;               [:db/ident ident-attr])
-;;             txs)]
-;;       (log/debug "e-idents-after" txs-after)
-;;       (txf db txs-after))))
-
-;; (defn e-_attr-as-ident [txf]
-;;   (fn [db txs]
-;;     (let [txs-after
-;;           (specter/transform
-;;             [specter/ALL map? #(contains? % :e.type/_attributes) :e.type/_attributes keyword?]
-;;             (fn [ident-attr]
-;;               [:db/ident ident-attr])
-;;             txs)]
-;;       (log/debug "e-idents-after" txs-after)
-;;       (txf db txs-after))))
-
-
-;; (defn as-middleware [db txs]
-;;   ;; FIXME: this is just to get it working. convert to proper middleware
-;;   txs)
-
-;; (defn make-unensured-schema!
-;;   "Datascript has no schema migrations. Assert the schema the first time then keep it forever."
-;;   [conn]
-;;   (let [schema-data (merge dat.view/base-schema
-;;                            (-> "schema.edn" io/resource slurp read-string))
-;;         ;; FIXME: magic keywords
-;;         txes (cat-into [] (-> schema-data :dat.view/base-schema :txes) (-> schema-data :catalysis/base-schema :txes))]
-;;     (doseq [txs txes]
-;;       (do
-;;         (dat.sync/apply-schema-tx! conn [[:db.fn/call ((comp transform-tx-ids attr-as-ident e-_attr-as-ident e-attr-as-ident no-attribute-install) as-middleware) txs]])))))
-
-;; ;(-> "config/local/seed-data.edn" slurp read-string)
-
-;; (defn load-data!
-;;   [conn filename]
-;;   (let [data (-> filename slurp read-string)]
-;;     (dapi/transact conn data)))
-
-;; (defrecord PersistentDatascript [config conn tx-report-chan]
-;;   component/Lifecycle
-;;   (start [component]
-;;     (let [url "resources/persistent-datomic.edn";;(-> config :persistent-datascript :url)
-;;           conn (or conn (ds/create-conn {:db/ident {:db/unique :db.unique/identity}
-;;                                          :e.type/attributes {:db/type :db.type/ref
-;;                                                              :db/cardinality :db.cardinality/many}}))
-;;           tx-report-chan (or tx-report-chan (async/chan))]
-;;       (ds/transact! conn [{:db/id -1
-;;                            :db/ident :db/ident
-;;                            :db/unique :db.unique/identity}
-;;                           {:db/id -2
-;;                            :db/ident :db/doc}
-;;                           {:db/id -3
-;;                            :db/ident :db/valueType}
-;;                           {:db/id -4
-;;                            :db/ident :db.unique/identity}])
-;; ;;       (try
-;; ;;         (nippy/thaw-from-in! (clojure.java.io/input-stream url))
-;; ;;         (catch java.io.FileNotFoundException e
-;;           (make-unensured-schema! conn)
-;;       ;;))
-;;       (ds/listen!
-;;         conn
-;;         ::async
-;;         (fn [report]
-;;           (async/put! tx-report-chan report)))
-;;       ;; TODO: add a one way migration from PersistentDatascript -> Datomic
-;; ;;       (go-loop []
-;; ;;         (let [{:keys [db-after]} (async/<!! tx-report-chan)]
-;; ;;           (nippy/freeze-to-out! (clojure.java.io/output-stream url) db-after))
-;; ;;         (recur))
-;;       (log/info "PersistentDatascript Starting")
-;;       ;; (ensure-schema! conn)
-;;       (assoc component
-;;         :kind :persistent-datascript
-;;         :conn conn
-;;         :tx-report-chan tx-report-chan)))
-;;   (stop [component]
-;;         (ds/unlisten! conn ::async)
-;;     (assoc component
-;;       :conn nil
-;;       :tx-report-chan nil)))
 
 (def bare-bones-schema
   {:db/ident {:db/unique :db.unique/identity}
@@ -489,7 +370,7 @@
                            (-> "schema.edn" io/resource slurp read-string))
         ;; FIXME: conformity unavailable so using hardcoded schema loading
         dat-view-schema-txes (get-in schema-data [:dat.view/base-schema :txes])
-        dat-sys-schema-txes (get-in schema-data [:catalysis/base-schema :txes])
+        dat-sys-schema-txes (get-in schema-data [:datsys/base-schema :txes])
         txes (cat-into
                 [enum-idents schema-idents]
                dat-view-schema-txes
