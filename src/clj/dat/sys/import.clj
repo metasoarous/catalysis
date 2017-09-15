@@ -25,6 +25,8 @@
         component))
 
 
-(defn new-importer []
-  (map->Importer {}))
+(defn new-importer
+  ([] {})
+  ([opts]
+   (map->Importer opts)))
 
