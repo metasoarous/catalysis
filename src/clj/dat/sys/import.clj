@@ -11,14 +11,12 @@
   component/Lifecycle
   (start [component]
     (log/info "Importing data")
-    (let [{:as datom-api :keys [transact! snap]} (:datom-api knowbase)
-          reset-db? true;;(get-in config [:dat.sys/db :reset-db?])
+    (let [reset-db? true;;(get-in config [:dat.sys/db :reset-db?])
           conn (:conn knowbase)
           data (-> "resources/test-data.edn" slurp read-string)]
-      ;; FIXME: persistent datom-api trick no longer working. should be moved into dat.sync.db or fixed in a different way.
       ;; FIXME: make idempotent
       (when reset-db?
-        (transact! conn data)
+        (d/transact! conn data dat.sync/ident-tx-meta)
 
         (when (instance? datomic.Connection conn)
           (log/info "  providing uuidents")

@@ -4,12 +4,12 @@
                 :cljs [[cljs.core.async :as async]])
             [taoensso.timbre :as log :include-macros true]
             [dat.sync.core :as dat.sync]
+            [dat.sync.db :as d]
             [datascript.core :as ds]
             [datascript.db]
             [dat.view]
             [dat.spec.protocols :as protocols]
             [dat.sys.utils :refer [deep-merge cat-into]]
-            [com.rpl.specter :as specter]
             #?(:clj [taoensso.nippy :as nippy])
             #?(:clj [clojure.java.io :as io])
             #?(:clj [io.rkn.conformity :as conformity])
@@ -18,36 +18,6 @@
             )
   #?(:clj
       (:import [java.io DataInputStream DataOutputStream])))
-
-(defrecord DatomAPI [pull pull-many q with entity transact! snap])
-
-(def datascript-api
-  (map->DatomAPI
-  {:pull ds/pull
-   :pull-many ds/pull-many
-   :q ds/q
-   :with ds/with
-   :entity ds/entity
-   :transact! ds/transact!
-   :snap deref}))
-
-#?(:clj
-(defn datomic-transact!
-  ([conn txs]
-   (datomic-transact! conn txs nil))
-  ([conn txs tx-meta]
-   @(dapi/transact conn txs))))
-
-#?(:clj
-(def datomic-api
-  (map->DatomAPI
-  {:pull dapi/pull
-   :pull-many dapi/pull-many
-   :q dapi/q
-   :with dapi/with
-   :entity dapi/entity
-   :transact! datomic-transact!
-   :snap dapi/db})))
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -65,7 +35,7 @@
       (catch Exception e
         (.printStackTrace e))))))
 
-(defrecord DatascriptDB [config conn tx-report-chan datom-api]
+(defrecord DatascriptDB [config conn tx-report-chan]
    component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -85,7 +55,6 @@
         (ds/listen! conn ::tx-report #(async/put! tx-report-chan %)))
       (assoc component
         :tx-report-chan tx-report-chan
-        :datom-api datascript-api
         :conn conn)))
   (stop [component]
     (ds/unlisten! conn ::tx-report)
@@ -111,7 +80,7 @@
   (map->DatascriptDB {}))
 
 #?(:clj
-(defrecord DatomicDB [config conn tx-report-chan datom-api initialized?]
+(defrecord DatomicDB [config conn tx-report-chan initialized?]
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -122,7 +91,6 @@
           conn (or conn (dapi/connect url))
           tx-report-queue (dapi/tx-report-queue conn)
           component (assoc component
-                      :datom-api datomic-api
                       :conn conn
                       :tx-report-chan tx-report-chan)]
       ;; XXX Should be a little smarter here and actually test to see if the schema is in place, then transact
@@ -171,14 +139,6 @@
 #?(:clj
 (defn create-datomic []
   (map->DatomicDB {})))
-
-(defn datomic-tempids->ints [txs]
-  ;; TODO: handle datomic partitions
-  (let [txs-after (specter/transform
-                    (specter/walker #(instance? datomic.db.DbId %))
-                    #(:idx %)
-                    txs)]
-    txs-after))
 
 (def bare-bones-schema
   {:db/ident {:db/unique :db.unique/identity}
@@ -249,38 +209,6 @@
    {:db/ident :dat.sync/uuident
     :db/unique :db.unique/identity}])
 
-(defn attr-ref-middleware [transact]
-  (fn [{:as report :keys [db-after]} txs]
-    (let [txs (datomic-tempids->ints txs)]
-;;       (log/debug "txs-post-id" txs)
-      ;; ***???: attr-refs become [:db/ident keyword?]. testing implementation in datascript
-      (transact report txs))))
-
-(defn persistent-datascript-transact!
-  ([conn txs] (persistent-datascript-transact! conn txs nil))
-  ([conn txs {:as tx-meta :keys [datascript.db/tx-middleware]}]
-   (ds/transact! conn txs
-    (assoc
-      (or tx-meta {})
-      :datascript.db/tx-middleware
-      (comp
-        attr-ref-middleware
-        (or tx-middleware identity)
-        dat.sync/uuident-all-the-things
-        datascript.db/schema-middleware)))))
-
-(def persistent-datascript-api
-  (map->DatomAPI
-  {:pull ds/pull
-   :pull-many ds/pull-many
-   :q ds/q
-   :with ds/with
-   :entity ds/entity
-   :transact! persistent-datascript-transact!
-   :snap deref
-;;    :listen! ds/listen!
-   }))
-
 #?(:clj
 (defn ensure-schema-datascript!
   [conn]
@@ -297,9 +225,11 @@
     (doseq [txs txes]
       (do
 ;;         (log/debug "ensuring txs: " txs)
-        (persistent-datascript-transact!
+        (d/transact!
           conn
-          txs))))))
+          txs
+          dat.sync/ident-tx-meta
+          ))))))
 
 #?(:clj
 (defn db-persister [url]
@@ -335,7 +265,6 @@
       (ds/listen! conn ::persist (db-persister url))
       (assoc component
         :tx-report-chan tx-report-chan
-        :datom-api persistent-datascript-api
         :conn conn)))
   (stop [component]
     (ds/unlisten! conn ::tx-report)
