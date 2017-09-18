@@ -93,7 +93,7 @@
               ;; A debug example:
               ;[dat.view/debug "todo instance eids:" @(type-instance-eids-rx app :e.type/Todo)]
               (log/info "inside the main function")
-;;               [:p (str "conn: " (:schema (deref (:conn app))))]
+              [:p (str "conn: " (:schema (deref (:conn app))))]
               [dat.view/debug "Here's a debug example:"
                @(posh/q '[:find ?e ?t-ident
                           :where [?e :e/type ?t]

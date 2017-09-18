@@ -17,7 +17,7 @@
 (defn init
   ([config-overrides]
    (alter-var-root #'system (fn [_] (assoc (system/create-system config-overrides)
-                                      :http-server (component/using (fserver/new-figwheel-server) [:datomic :config :ring-handler])))))
+                                      :http-server (component/using (fserver/new-figwheel-server) [:datsync :config :ring-handler])))))
   ([] (init {})))
 
 (defn start []

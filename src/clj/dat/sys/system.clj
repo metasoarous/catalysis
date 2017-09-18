@@ -19,32 +19,18 @@
    (component/system-map
      :remote (sente/new-sente-remote {:server? true})
      :config (config/create-config config-overrides)
-;;      :datomic (component/using (db/create-persistent-datascript) [:config])
-     :datomic (component/using
-                (db/create-datomic) [:config])
+;;      :knowbase (component/using (db/create-persistent-datascript) [:config])
+     :knowbase (component/using (db/create-datomic) [:config])
      :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
-     :importer (component/using (import/new-importer
-                                  {:datomic? true} ;; FIXME: hack
-                                  )
-                                {:config :config
-                                 :knowbase :datomic
-                                 })
+     :importer (component/using (import/new-importer) [:config :knowbase])
+     :reactor (component/using (oreactor/new-onyx-reactor) [:remote :dispatcher])
+     :datsync (component/using (dat.sync/new-datsync-server) [:knowbase :remote :dispatcher :reactor])
      :routes (component/using (routes/new-routes) [:config])
      :ring-handler (component/using (handler/new-ring-handler)
                                     {:config :config
                                      :routes :routes
                                      :ws-connection :remote})
-     ;; user.clj depends on :http-server
-     :http-server (component/using (server/new-http-server) [:datomic :config :ring-handler])
-    :datsync    (component/using
-                  (dat.sync/new-datsync-server)
-                  {:knowbase :datomic
-                   :remote :remote
-                   :dispatcher :dispatcher
-                   :reactor :reactor})
-    :reactor    (component/using
-                  (oreactor/new-onyx-reactor)
-                  [:remote :dispatcher])
-     ))
+     ;; NOTE: dev/clj/user.clj depends on :http-server
+     :http-server (component/using (server/new-http-server) [:config :ring-handler :datsync])))
   ([] (create-system {})))
 

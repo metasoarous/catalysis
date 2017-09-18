@@ -23,7 +23,7 @@
  {:db/id #db/id[:db.part/user -140] :e/type :e.type/Todo :e/name "finish datsys" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -10] #db/id[:db.part/user -40]]}
  ;; Some more stuff to play with...
  {:db/id #db/id[:db.part/user -150] :e/type :e.type/Todo :e/name "think about snails"}
- {:db/id #db/id[:db.part/user -151] :e/type :e.type/Todo :e/name "play piano"}
+;;  {:db/id #db/id[:db.part/user -151] :e/type :e.type/Todo :e/name "play piano"}
  {:db/id #db/id[:db.part/user -152] :e/type :e.type/Todo :e/name "finish dynamatch" :e/tags [#db/id[:db.part/user -10]]}
  {:db/id #db/id[:db.part/user -153] :e/type :e.type/Todo :e/name "compose symphony" :e/tags [#db/id[:db.part/user -30]]}
  {:db/id #db/id[:db.part/user -154] :e/type :e.type/Todo :e/name "compose really epic symphony" :e/tags [#db/id[:db.part/user -30]]}

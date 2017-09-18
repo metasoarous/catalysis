@@ -3,9 +3,9 @@
   (:require #?@(:clj [[clojure.core.async :as async :refer [go go-loop]]]
                 :cljs [[cljs.core.async :as async]])
             [taoensso.timbre :as log :include-macros true]
-
             [dat.sync.core :as dat.sync]
             [datascript.core :as ds]
+            [datascript.db]
             [dat.view]
             [dat.spec.protocols :as protocols]
             [dat.sys.utils :refer [deep-merge cat-into]]
@@ -19,77 +19,6 @@
   #?(:clj
       (:import [java.io DataInputStream DataOutputStream])))
 
-;; ;;
-;; ;; From https://github.com/plumatic/schema
-;; ;;
-;; (defn cljs-env?
-;;   "Take the &env from a macro, and tell whether we are expanding into cljs."
-;;   [env]
-;;   (boolean (:ns env)))
-
-;; ;;
-;; ;; From https://github.com/plumatic/schema
-;; ;;
-;; #?(:clj
-;; (defmacro if-cljs
-;;   "Return then if we are generating cljs code and else for Clojure code.
-;;    https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"
-;;   [then else]
-;;   (if (cljs-env? &env) then else)))
-
-;; (defn-tx
-;;   {:require }
-;;   [db arg arg]
-;;   (d/q blah blah))
-
-;; #?(:clj
-;; (defmacro defn-tx [sym form & body]
-;;   `(if-cljs
-;;      (defn ~sym ~form ~body)
-;;      (let [binds# (when (vector? ~form) ~form)
-;;            fn-map# (when (map? ~form) ~form)
-;;            body# (if binds# '~@body '~(rest @body))
-;;            binds# (or binds# ~(first @body))
-;;            fn-map# (into
-;;                      {:lang "clojure"
-;;                       :params binds#
-;;                       :code body#}
-;;                      fn-map#)]
-;;        (def ~sym (datomic.api/function fn-map#))))))
-
-;; (defmacro defn-tx [api {:keys [q pull]}]
-;;   `{:params [db]
-;;     :requires [[dat.sync.datomic :as dat.sync.kb]]
-;;     :lang "clojure"
-;;     :code dat.sync.kb/q
-;;    })
-
-;; (defn register-fn! [{:as api :keys [transact!]} conn fn-ident fn-spec]
-;;   (transact!
-;;     conn
-;;     [{:db/ident fn-ident
-;;       :db/fn fn-spec
-;;       :db/doc ""
-;;       :db/id #db/id [:db.part/user]
-;;       }
-;;       ]))
-
-;; #?(:clj
-;; (defn datomic-listen! [& args]
-;;   (throw "listen! not implemented in datomic yet")))
-
-;; (defmacro simple-datomic-fn [fn-key]
-;;   `{:db/id #db/id [:db.part/user]
-;;     :db/ident fn-key
-;;     :db/fn (datomic.api/function
-;;              '{:lang "clojure"
-;;                :params [db]
-;;                :requires [[~(namespace fn-key)]]
-;;                :code (~(symbol fn-key) db)})
-;;     ;;     :db/doc ;;TODO:
-
-;;     })
-
 (defrecord DatomAPI [pull pull-many q with entity transact! snap])
 
 (def datascript-api
@@ -100,9 +29,7 @@
    :with ds/with
    :entity ds/entity
    :transact! ds/transact!
-   :snap deref
-;;    :listen! ds/listen!
-   }))
+   :snap deref}))
 
 #?(:clj
 (defn datomic-transact!
@@ -120,9 +47,7 @@
    :with dapi/with
    :entity dapi/entity
    :transact! datomic-transact!
-   :snap dapi/db
-;;    :listen! datomic-listen!
-   })))
+   :snap dapi/db})))
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -186,7 +111,7 @@
   (map->DatascriptDB {}))
 
 #?(:clj
-(defrecord DatomicDB [config conn tx-report-chan datom-api]
+(defrecord DatomicDB [config conn tx-report-chan datom-api initialized?]
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
@@ -331,12 +256,6 @@
       ;; ***???: attr-refs become [:db/ident keyword?]. testing implementation in datascript
       (transact report txs))))
 
-;; (def identing-meta
-;;   {:datascript.db/tx-middleware
-;;    (comp
-;;      attr-ref-middleware
-;;      datascript.db/schema-middleware)})
-
 (defn persistent-datascript-transact!
   ([conn txs] (persistent-datascript-transact! conn txs nil))
   ([conn txs {:as tx-meta :keys [datascript.db/tx-middleware]}]
@@ -393,24 +312,27 @@
 (defrecord PersistentDatascriptDB [config conn tx-report-chan datom-api]
    component/Lifecycle
   (start [component]
-    (let [url "resources/persistent-datomic.bytes";;(-> config :persistent-datascript :url)
-          listening? conn ;; FIXME: assumes conn will never be fed in from ss system
+    (let [url "resources/persistent-datomic.nippy";;(-> config :persistent-datascript :url)
+          reset-db? (get-in config [:dat.sys/db :reset-db?])
           base-schema (deep-merge bare-bones-schema
                                   (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
-          conn (or conn (ds/create-conn base-schema))
-          tx-report-chan (or tx-report-chan (async/chan))]
-      (ensure-schema-datascript! conn)
-      (try
-        (with-open [in (io/input-stream url)]
-          (let [{:keys [datoms schema]} (nippy/thaw-from-in! (DataInputStream. in))]
-            (when datoms
-              (reset! conn (ds/init-db datoms schema)))))
-        (catch Exception e))
-
-      (when-not listening?
-        ;; ???: is this check already done in ds/listen!
-        (ds/listen! conn ::tx-report #(async/put! tx-report-chan %))
-        (ds/listen! conn ::persist (db-persister url)))
+          tx-report-chan (or tx-report-chan (async/chan))
+          conn-from-storage
+          (or
+            conn
+            (when-not reset-db?
+              (try
+                (with-open [in (io/input-stream url)]
+                  (let [{:keys [datoms schema]} (nippy/thaw-from-in! (DataInputStream. in))]
+                    (when datoms
+                      (ds/conn-from-datoms datoms schema))))
+                (catch Exception e))))
+          initialized? (boolean conn-from-storage)
+          conn (or conn-from-storage (ds/create-conn base-schema))]
+      (when-not initialized?
+        (ensure-schema-datascript! conn))
+      (ds/listen! conn ::tx-report #(async/put! tx-report-chan %))
+      (ds/listen! conn ::persist (db-persister url))
       (assoc component
         :tx-report-chan tx-report-chan
         :datom-api persistent-datascript-api
@@ -436,8 +358,10 @@
   (events [component from to] nil)))
 
 #?(:clj
-(defn create-persistent-datascript []
-  (map->PersistentDatascriptDB {})))
+(defn create-persistent-datascript
+  ([] (create-persistent-datascript {}))
+  ([opts]
+   (map->PersistentDatascriptDB opts))))
 
 
 
