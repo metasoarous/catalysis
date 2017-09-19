@@ -5,8 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :min-lein-version "2.0.0"
   :dependencies [[org.clojure/clojure "1.9.0-alpha16"]
-                 [org.clojure/tools.reader "1.0.0-beta3"]
                  [org.clojure/clojurescript "1.9.542"]
+                 [org.clojure/tools.reader "1.0.0-beta3"]
                  [org.clojure/core.async "0.3.442"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [clojure-future-spec "1.9.0-alpha17"]
@@ -43,7 +43,8 @@
                  [ch.qos.logback/logback-classic "1.1.8"]
                  [com.taoensso/timbre "4.8.0"]
                  [com.taoensso/encore "2.88.2"]
-                 [com.taoensso/sente "1.11.0" :exclusions [org.clojure/tools.reader]]
+                 [com.taoensso/sente "1.11.0" ;;:exclusions [org.clojure/tools.reader]
+                  ]
                  [com.taoensso/nippy "2.13.0"]
 
                  [io.replikativ/superv.async "0.2.7"]

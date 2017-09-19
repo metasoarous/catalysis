@@ -5,7 +5,7 @@
 ;; what we expect to see in the shape of the database.
 
 {;; ## Datsys Domain model
- :datsys/base-schema
+ :dat.sys/base-schema
  ;; This is how conformity does dependencies (:requires)
  {:requires [:dat.view/base-schema]
   :txes

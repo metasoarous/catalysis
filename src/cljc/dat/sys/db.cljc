@@ -12,12 +12,21 @@
             [dat.sys.utils :refer [deep-merge cat-into]]
             #?(:clj [taoensso.nippy :as nippy])
             #?(:clj [clojure.java.io :as io])
-            #?(:clj [io.rkn.conformity :as conformity])
+;;             #?(:clj [io.rkn.conformity :as conformity])
+            [io.rkn.conformity.core :as conformity]
             #?(:clj [datomic.api :as dapi])
             [com.stuartsierra.component :as component]
             )
   #?(:clj
       (:import [java.io DataInputStream DataOutputStream])))
+
+(defn fn-entity? [db eid]
+    (-> (d/entity db eid)
+        :db/fn
+        boolean))
+
+(defn fn-datom? [db [eid _ _ _ _]]
+  (fn-entity? db eid))
 
 ;; ;; Will need to come up with a migration system XXX
 ;; ;; Look at https://github.com/rkneufeldapi/conformity and https://github.com/bitemyapp/brambling
@@ -27,7 +36,9 @@
   [conn]
   ;; The schema is in `resources/schema.edn`; Note that we make requirements in that schema about having Datview schema loaded
   (let [schema-data (merge dat.view/base-schema
-                           (-> "schema.edn" io/resource slurp read-string))]
+                           (conformity/read-resource "schema.edn")
+;;                            (-> "schema.edn" io/resource slurp read-string)
+                           )]
     ;; This is where ideally we would be looking at a dependency graph of norms and executing in that order.
     ;; Look at Stuart Sierra's dependency library. XXX
     (try
@@ -72,7 +83,8 @@
     ;; TODO: support 'at
     (protocols/snapshot component))
   (snapshot [component]
-    (ds/datoms @conn :eavt))
+    (let [db @conn]
+      (remove (partial fn-datom? db) (ds/datoms db :eavt))))
   (events [component from] nil)
   (events [component from to] nil))
 
@@ -115,15 +127,8 @@
     ;; TODO: support for 'at
     (protocols/snapshot component))
   (snapshot [component]
-    (let [db (dapi/db conn)
-          db-fns (into
-                   #{}
-                  (dapi/q '[:find [?fn ...]
-                           :where
-                           [?fn :db/fn]] db))]
-          (->> (dapi/datoms db :eavt)
-               (remove (fn [[e _ _ _ _]]
-                         (contains? db-fns e))))))
+    (let [db (dapi/db conn)]
+      (remove (partial fn-datom? db) (dapi/datoms db :eavt))))
   (events [component from] nil)
   (events [component from to] nil)))
 
@@ -202,12 +207,12 @@
    {:db/ident :db.part/tx}
    ])
 
-(def datsync-idents
-  ;; FIXME: get from datsync
-  [{:db/ident :e/type
-    :db/valueType :db.type/ref}
-   {:db/ident :dat.sync/uuident
-    :db/unique :db.unique/identity}])
+;; (def datsync-idents
+;;   ;; FIXME: get from datsync
+;;   [{:db/ident :e/type
+;;     :db/valueType :db.type/ref}
+;;    {:db/ident :dat.sync/uuident
+;;     :db/unique :db.unique/identity}])
 
 #?(:clj
 (defn ensure-schema-datascript!
@@ -222,13 +227,14 @@
                 [enum-idents schema-idents]
                dat-view-schema-txes
                dat-sys-schema-txes)]
-    (doseq [txs txes]
+    (doseq [txs [enum-idents schema-idents];;txes
+            ]
       (do
 ;;         (log/debug "ensuring txs: " txs)
         (d/transact!
           conn
           txs
-          dat.sync/ident-tx-meta
+;;           dat.sync/ident-tx-meta
           ))))))
 
 #?(:clj
@@ -260,7 +266,9 @@
           initialized? (boolean conn-from-storage)
           conn (or conn-from-storage (ds/create-conn base-schema))]
       (when-not initialized?
-        (ensure-schema-datascript! conn))
+        (ensure-schema-datascript! conn)
+        (ensure-schema! conn)
+        )
       (ds/listen! conn ::tx-report #(async/put! tx-report-chan %))
       (ds/listen! conn ::persist (db-persister url))
       (assoc component
@@ -282,7 +290,8 @@
     ;; TODO: support 'at
     (protocols/snapshot component))
   (snapshot [component]
-    (ds/datoms @conn :eavt))
+    (let [db @conn]
+      (remove (partial fn-datom? db) (ds/datoms db :eavt))))
   (events [component from] nil)
   (events [component from to] nil)))
 

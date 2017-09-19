@@ -1,33 +1,38 @@
 ;; # Some play data to work with
-[
- ;; ## Some categories
- {:db/id #db/id[:db.part/user -1] :e/type :e.type/Category :e/name "Work" :e/description "Paid things"}
- {:db/id #db/id[:db.part/user -2] :e/type :e.type/Category :e/name "Family" :e/description "Family time"}
- {:db/id #db/id[:db.part/user -3] :e/type :e.type/Category :e/name "Side Projects" :e/description "Things I'm working on..."}
+{:dat.sys/todos
+ {
+  ;; NOTE: can't do :requires for schema because importer runs at a different stage than schema conforming. importer always runs after so we can assume it has been loaded in any case.
+  ;; :requires [:dat.sys/base-schema]
+  :txes
+  [[
+     ;; ## Some categories
+     {:db/id #db/id[:db.part/user -1] :e/type :e.type/Category :e/name "Work" :e/description "Paid things"}
+     {:db/id #db/id[:db.part/user -2] :e/type :e.type/Category :e/name "Family" :e/description "Family time"}
+     {:db/id #db/id[:db.part/user -3] :e/type :e.type/Category :e/name "Side Projects" :e/description "Things I'm working on..."}
 
- ;; ## Some tags
- {:db/id #db/id[:db.part/user -10] :e/type :e.type/Tag :e/name "overhead" :e/description "Work things that aren't billable hours"}
- {:db/id #db/id[:db.part/user -20] :e/type :e.type/Tag :e/name "dates" :e/description "Date night time with spouse"}
- {:db/id #db/id[:db.part/user -30] :e/type :e.type/Tag :e/name "music" :e/description "Musical projects"}
- {:db/id #db/id[:db.part/user -40] :e/type :e.type/Tag :e/name "programming" :e/description "Programming (work or project)"}
+     ;; ## Some tags
+     {:db/id #db/id[:db.part/user -10] :e/type :e.type/Tag :e/name "overhead" :e/description "Work things that aren't billable hours"}
+     {:db/id #db/id[:db.part/user -20] :e/type :e.type/Tag :e/name "dates" :e/description "Date night time with spouse"}
+     {:db/id #db/id[:db.part/user -30] :e/type :e.type/Tag :e/name "music" :e/description "Musical projects"}
+     {:db/id #db/id[:db.part/user -40] :e/type :e.type/Tag :e/name "programming" :e/description "Programming (work or project)"}
 
- ;; ## Some Todo items
- {:db/id #db/id[:db.part/user -110] :e/type :e.type/Todo :e/name "finish ACME goods project" :e/description "Building out inventory thing" :e/category #db/id[:db.part/user -1]}
- ;; Note; we should infer category based on the :todo/subtask relationship
- {:db/id #db/id[:db.part/user -111] :e/type :e.type/Todo :e/name "finish routing" :e/description "Build out routing layer on the server"}
- ;; Assign as subtask
- [:db/add #db/id[:db.part/user -110] :todo/subtasks #db/id[:db.part/user -111]]
- ;; Other misc todos...
- {:db/id #db/id[:db.part/user -120] :e/type :e.type/Todo :e/name "dinner at la escalera" :e/description "With the love of my life" :e/category #db/id[:db.part/user -2] :e/tags [#db/id[:db.part/user -20]]}
- {:db/id #db/id[:db.part/user -130] :e/type :e.type/Todo :e/name "play piano" :e/description "Practice and work on tunes" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -30]]}
- {:db/id #db/id[:db.part/user -140] :e/type :e.type/Todo :e/name "finish datsys" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -10] #db/id[:db.part/user -40]]}
- ;; Some more stuff to play with...
- {:db/id #db/id[:db.part/user -150] :e/type :e.type/Todo :e/name "think about snails"}
-;;  {:db/id #db/id[:db.part/user -151] :e/type :e.type/Todo :e/name "play piano"}
- {:db/id #db/id[:db.part/user -152] :e/type :e.type/Todo :e/name "finish dynamatch" :e/tags [#db/id[:db.part/user -10]]}
- {:db/id #db/id[:db.part/user -153] :e/type :e.type/Todo :e/name "compose symphony" :e/tags [#db/id[:db.part/user -30]]}
- {:db/id #db/id[:db.part/user -154] :e/type :e.type/Todo :e/name "compose really epic symphony" :e/tags [#db/id[:db.part/user -30]]}
- {:db/id #db/id[:db.part/user -155] :e/type :e.type/Todo :e/name "write book with colin" :e/description "About patterns and chaos" :e/category #db/id[:db.part/user -3]}
- {:db/id #db/id[:db.part/user -156] :e/type :e.type/Todo :e/name "ride bike with Calvin" :e/category #db/id[:db.part/user -2]}]
+     ;; ## Some Todo items
+     {:db/id #db/id[:db.part/user -110] :e/type :e.type/Todo :e/name "finish ACME goods project" :e/description "Building out inventory thing" :e/category #db/id[:db.part/user -1]}
+     ;; Note; we should infer category based on the :todo/subtask relationship
+     {:db/id #db/id[:db.part/user -111] :e/type :e.type/Todo :e/name "finish routing" :e/description "Build out routing layer on the server"}
+     ;; Assign as subtask
+     [:db/add #db/id[:db.part/user -110] :todo/subtasks #db/id[:db.part/user -111]]
+     ;; Other misc todos...
+     {:db/id #db/id[:db.part/user -120] :e/type :e.type/Todo :e/name "dinner at la escalera" :e/description "With the love of my life" :e/category #db/id[:db.part/user -2] :e/tags [#db/id[:db.part/user -20]]}
+     {:db/id #db/id[:db.part/user -130] :e/type :e.type/Todo :e/name "play piano" :e/description "Practice and work on tunes" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -30]]}
+     {:db/id #db/id[:db.part/user -140] :e/type :e.type/Todo :e/name "finish datsys" :e/category #db/id[:db.part/user -3] :e/tags [#db/id[:db.part/user -10] #db/id[:db.part/user -40]]}
+     ;; Some more stuff to play with...
+     {:db/id #db/id[:db.part/user -150] :e/type :e.type/Todo :e/name "think about snails"}
+     ;;  {:db/id #db/id[:db.part/user -151] :e/type :e.type/Todo :e/name "play piano"}
+     {:db/id #db/id[:db.part/user -152] :e/type :e.type/Todo :e/name "finish dynamatch" :e/tags [#db/id[:db.part/user -10]]}
+     {:db/id #db/id[:db.part/user -153] :e/type :e.type/Todo :e/name "compose symphony" :e/tags [#db/id[:db.part/user -30]]}
+     {:db/id #db/id[:db.part/user -154] :e/type :e.type/Todo :e/name "compose really epic symphony" :e/tags [#db/id[:db.part/user -30]]}
+     {:db/id #db/id[:db.part/user -155] :e/type :e.type/Todo :e/name "write book with colin" :e/description "About patterns and chaos" :e/category #db/id[:db.part/user -3]}
+     {:db/id #db/id[:db.part/user -156] :e/type :e.type/Todo :e/name "ride bike with Calvin" :e/category #db/id[:db.part/user -2]}]]}}
 
 

@@ -5,24 +5,24 @@
             [dat.sync.db :as d]
             [datomic.api :as dapi]
             [clojure.java.io :as io]
+            [io.rkn.conformity.core :as conformity]
             [com.stuartsierra.component :as component]))
 
 (defrecord Importer [config knowbase]
   component/Lifecycle
   (start [component]
     (log/info "Importing data")
-    (let [reset-db? true;;(get-in config [:dat.sys/db :reset-db?])
-          conn (:conn knowbase)
-          data (-> "resources/test-data.edn" slurp read-string)]
-      ;; FIXME: make idempotent
-      (when reset-db?
-        (d/transact! conn data dat.sync/ident-tx-meta)
+    (let [conn (:conn knowbase)
+          data (conformity/read-resource "test-data.edn")]
+        (conformity/ensure-conforms
+          conn
+          data)
 
         (when (instance? datomic.Connection conn)
           (log/info "  providing uuidents")
-          ;; ???: this transaction could potentially suffer from race conditions with the client. make it a db/fn to alleviate?
-          (let [uuidents (dat.sync/uuident-all-the-things* (d/snap conn) (protocols/snapshot knowbase))]
-            (d/transact! conn uuidents))))))
+          ;; TODO: make a db-fn that does this work to avoid race conditions
+          (let [uuidents (d/uuident-all-the-things* (d/snap conn) (protocols/snapshot knowbase))]
+            (d/transact! conn uuidents)))))
   (stop [component]
         component))
 
