@@ -19,8 +19,8 @@
    (component/system-map
      :remote (sente/new-sente-remote {:server? true})
      :config (config/create-config config-overrides)
-     :knowbase (component/using (db/create-persistent-datascript) [:config])
-;;      :knowbase (component/using (db/create-datomic) [:config])
+;;      :knowbase (component/using (db/create-persistent-datascript) [:config])
+     :knowbase (component/using (db/create-knowledge-base) [:config])
      :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
      :importer (component/using (import/new-importer) [:config :knowbase])
      :reactor (component/using (oreactor/new-onyx-reactor) [:remote :dispatcher])

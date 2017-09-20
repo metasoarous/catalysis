@@ -23,9 +23,18 @@
    :datomic-seed-data    {:path [:datomic :seed-data]}
    :datomic-reset-schema {:path [:datomic :reset-db] :parse ?->boolean}})
 
+(def default-server-kind
+;;   :datomic
+  :datascript
+  )
+
 (def defaults
   {:server {:port 2358}
-   :datomic {:url "datomic:mem://base"}})
+   :dat.sync/server {:kind default-server-kind
+;;                      :reset-on-start? true
+                     :url (case default-server-kind
+                            :datomic "datomic:mem://base"
+                            :datascript "file:resources/persistent-datascript")}})
 
 
 (defn get-environ-config [rules env]

@@ -25,20 +25,20 @@
 
 (defn new-system []
   (component/system-map
-    :datascript (component/using
-                  (db/create-datascript)
-                  [])
+    :config {:dat.sync/client {:kind :datascript}}
+    :knowbase (component/using
+                  (db/create-knowledge-base)
+                  [:config])
     :remote     (sente/new-sente-remote)
     :dispatcher (dispatcher/new-strictly-ordered-dispatcher)
     :app        (component/using
                   (dat.view/new-datview {:dat.view/main views/main})
-                  [:remote :dispatcher :datascript])
+                  {:remote :remote
+                   :dispatcher :dispatcher
+                   :datascript :knowbase})
     :datsync    (component/using
                   (dat.sync/new-datsync-client)
-                  {:knowbase :datascript
-                   :remote :remote
-                   :dispatcher :dispatcher
-                   :reactor :reactor})
+                  [:knowbase :remote :dispatcher :reactor])
     :reactor    (component/using
                   (oreactor/new-onyx-reactor)
                   [])

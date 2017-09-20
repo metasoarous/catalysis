@@ -96,7 +96,7 @@
   component/Lifecycle
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
-          url (-> config :datomic :url)
+          url (-> config :dat.sync/server :url)
           deleted? (dapi/delete-database url)
           created? (dapi/create-database url)
           tx-report-chan (or tx-report-chan (async/chan))
@@ -130,15 +130,6 @@
       (remove (partial fn-datom? db) (dapi/datoms db :eavt))))
   (events [component from] nil)
   (events [component from to] nil)))
-
-#?(:clj
-(defn bootstrap-deprecated [{:as component :keys [conn]}]
-  (let [db (dapi/db conn)]
-    (->> (dapi/datoms db :eavt)
-         (map (fn [[e a v t]] e))
-         (distinct)
-         (dapi/pull-many db '[*])
-         (filter #(not (:db/fn %)))))))
 
 #?(:clj
 (defn create-datomic []
@@ -206,35 +197,13 @@
    {:db/ident :db.part/tx}
    ])
 
-;; (def datsync-idents
-;;   ;; FIXME: get from datsync
-;;   [{:db/ident :e/type
-;;     :db/valueType :db.type/ref}
-;;    {:db/ident :dat.sync/uuid
-;;     :db/unique :db.unique/identity}])
-
 #?(:clj
 (defn ensure-schema-datascript!
   [conn]
-  ;; FIXME: :db.install/attribute needs to be a :db.type/ref
-  (let [schema-data (merge dat.view/base-schema
-                           (-> "schema.edn" io/resource slurp read-string))
-        ;; FIXME: conformity unavailable so using hardcoded schema loading
-        dat-view-schema-txes (get-in schema-data [:dat.view/base-schema :txes])
-        dat-sys-schema-txes (get-in schema-data [:datsys/base-schema :txes])
-        txes (cat-into
-                [enum-idents schema-idents]
-               dat-view-schema-txes
-               dat-sys-schema-txes)]
-    (doseq [txs [enum-idents schema-idents];;txes
-            ]
-      (do
-;;         (log/debug "ensuring txs: " txs)
-        (d/transact!
-          conn
-          txs
-;;           dat.sync/ident-tx-meta
-          ))))))
+  (doseq [txs [enum-idents schema-idents]]
+    (do
+      ;; (log/debug "ensuring txs: " txs)
+      (d/transact! conn txs)))))
 
 #?(:clj
 (defn db-persister [url]
@@ -247,7 +216,7 @@
 (defrecord PersistentDatascriptDB [config conn tx-report-chan datom-api]
    component/Lifecycle
   (start [component]
-    (let [url "resources/persistent-datomic.nippy";;(-> config :persistent-datascript :url)
+    (let [url "resources/persistent-datascript.nippy";;(-> config :persistent-datascript :url)
           reset-db? (get-in config [:dat.sys/db :reset-db?])
           base-schema (deep-merge bare-bones-schema
                                   (:datascript/schema config)) ;; FIXME: schema should be probably be completely in the config. maybe stored just like datomic schema.
@@ -300,6 +269,89 @@
   ([opts]
    (map->PersistentDatascriptDB opts))))
 
+(defn create-conn! [kind url reset-on-start?]
+  (case kind
+    :datomic
+    #?(:clj
+        (do
+          (when reset-on-start?
+            (dapi/delete-database url))
+          (dapi/create-database url) ;; ???: check for existence first?
+          (dapi/connect url)))
 
+    :datascript
+    (do
+      (let [conn-from-storage
+            #?(:clj
+                (when-not reset-on-start?
+                   (try
+                     (with-open [in (io/input-stream url)]
+                       (let [{:keys [datoms schema]} (nippy/thaw-from-in! (DataInputStream. in))]
+                         (when datoms
+                           (ds/conn-from-datoms datoms schema))))
+                     (catch Exception e)))
+                :cljs nil)]
+          (or conn-from-storage (ds/create-conn bare-bones-schema))))))
 
+(defrecord KnowledgeBase [config conn tx-report-chan kind]
+  component/Lifecycle
+  (start
+    [component]
+    (let [peer-type #?(:clj :dat.sync/server
+                       :cljs :dat.sync/client)
+          reset-on-start? true;;(get-in config {peer-type :reset-on-start?})
+          kind (get-in config [peer-type :kind])
+          url (get-in config [peer-type :url])
+          conn (or conn (create-conn! kind url reset-on-start?))
+          tx-report-chan (or tx-report-chan (async/chan))]
+      (log/info (str "Knowbase Starting with kind: " kind))
+      (case kind
+        :datascript
+        (do
+          #?(:clj (ensure-schema-datascript! conn))
+          (ds/listen! conn ::tx-report #(async/put! tx-report-chan %))
+          #?(:clj (ds/listen! conn ::persist (db-persister url))))
+
+        :datomic
+        (do
+          #?(:clj (dat.sync/go-tx-report! (dapi/tx-report-queue conn) tx-report-chan))))
+
+      #?(:clj (ensure-schema! conn))
+
+      (assoc component
+        :kind kind
+        :conn (d/conn-from-conn conn)
+        :tx-report-chan tx-report-chan)))
+  (stop
+    [component]
+    (case kind
+      :datascript
+      (do
+        (ds/unlisten! conn ::tx-report)
+        (ds/unlisten! conn ::persist)))
+    (assoc component
+      :kind nil
+      :conn nil
+      :tx-report-chan nil))
+
+  protocols/Wire
+  (send-chan [c]
+             ;; TODO: set up go block for transactions {:keys [txs]}
+             nil)
+  (recv-chan [c]
+             tx-report-chan)
+  protocols/EventState
+  (snapshot [component at]
+            ;; TODO: support 'at
+            (protocols/snapshot component))
+  (snapshot [component]
+            (let [db @conn]
+              (remove (partial fn-datom? db) (d/datoms db :eavt))))
+  (events [component from] nil)
+  (events [component from to] nil))
+
+(defn create-knowledge-base
+  ([] (create-knowledge-base {}))
+  ([opts]
+   (map->KnowledgeBase opts)))
 
