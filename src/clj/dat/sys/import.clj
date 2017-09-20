@@ -13,7 +13,7 @@
     (log/info "Importing data")
     (let [conn (:conn knowbase)
           data (conformity/read-resource "test-data.edn")]
-      (log/debug "import norms" data)
+;;       (log/debug "import norms" data)
         (conformity/ensure-conforms
           conn
           data)
