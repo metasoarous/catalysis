@@ -51,7 +51,7 @@
   (start [component]
     (let [listening? conn ;; FIXME: assumes conn will never be fed in from ss system
           base-schema (deep-merge {:db/ident {:db/unique :db.unique/identity}
-                                   :dat.sync/uuident {:db/unique :db.unique/identity}
+                                   :dat.sync/uuid {:db/unique :db.unique/identity}
                                    :db/cardinality {:db/valueType :db.type/ref}
                                    :db/valueType {:db/valueType :db.type/ref}
                                    :db/unique {:db/valueType :db.type/ref}
@@ -101,17 +101,16 @@
           created? (dapi/create-database url)
           tx-report-chan (or tx-report-chan (async/chan))
           conn (or conn (dapi/connect url))
-          tx-report-queue (dapi/tx-report-queue conn)
-          component (assoc component
-                      :conn conn
-                      :tx-report-chan tx-report-chan)]
+          tx-report-queue (dapi/tx-report-queue conn)]
       ;; XXX Should be a little smarter here and actually test to see if the schema is in place, then transact
       ;; if it isn't. Similarly when we get more robust migrations.
       (log/info "Datomic Starting")
       (when-not listening?
         (ensure-schema! conn)
         (dat.sync/go-tx-report! tx-report-queue tx-report-chan))
-    component))
+      (assoc component
+        :conn (d/conn-from-conn conn)
+        :tx-report-chan tx-report-chan)))
   (stop [component]
     (assoc component
       :conn nil
@@ -127,7 +126,7 @@
     ;; TODO: support for 'at
     (protocols/snapshot component))
   (snapshot [component]
-    (let [db (dapi/db conn)]
+    (let [db @conn]
       (remove (partial fn-datom? db) (dapi/datoms db :eavt))))
   (events [component from] nil)
   (events [component from to] nil)))
@@ -153,7 +152,7 @@
 
    ;; ???: can :e/type be in just transactions now?
    :e/type {:db/valueType :db.type/ref}
-   :dat.sync/uuident {:db/unique :db.unique/identity}
+   :dat.sync/uuid {:db/unique :db.unique/identity}
    })
 
 (def enum-idents
@@ -211,7 +210,7 @@
 ;;   ;; FIXME: get from datsync
 ;;   [{:db/ident :e/type
 ;;     :db/valueType :db.type/ref}
-;;    {:db/ident :dat.sync/uuident
+;;    {:db/ident :dat.sync/uuid
 ;;     :db/unique :db.unique/identity}])
 
 #?(:clj

@@ -12,13 +12,7 @@
   ;; Hmmm... should we have our own partition for datview?
   [;; ### Domain types;
    ;; It's recommended that you put as much of your logic about how types are supposed to related to eachother in the actual Datomic schema.
-   [{:db/id          #db/id[:db.part/db]
-     :db/ident       :dat.sync/uuident
-     :db/valueType   :db.type/uuid
-     :db/cardinality :db.cardinality/one
-     :db/doc         "A global identifier, every entity should have one."
-     :db.install/_attribute :db.part/db}
-    {:db/id #db/id[:db.part/user]
+   [{:db/id #db/id[:db.part/user]
      :db/ident :e.type/Todo      ;; Types are idents; Currently we refer to type by keyword; needs to change
      :e/type :e.type/Type        ;; Installs this entity as a type
      :e.type/attributes [:e/name :e/description :e/tags :e/category]

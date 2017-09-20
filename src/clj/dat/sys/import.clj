@@ -3,7 +3,6 @@
             [dat.spec.protocols :as protocols]
             [dat.sync.core :as dat.sync]
             [dat.sync.db :as d]
-            [datomic.api :as dapi]
             [clojure.java.io :as io]
             [io.rkn.conformity.core :as conformity]
             [com.stuartsierra.component :as component]))
@@ -14,15 +13,18 @@
     (log/info "Importing data")
     (let [conn (:conn knowbase)
           data (conformity/read-resource "test-data.edn")]
+      (log/debug "import norms" data)
         (conformity/ensure-conforms
           conn
           data)
 
-        (when (instance? datomic.Connection conn)
-          (log/info "  providing uuidents")
+        (case (d/db-kind conn)
+          (log/info "  providing uuids")
           ;; TODO: make a db-fn that does this work to avoid race conditions
-          (let [uuidents (d/uuident-all-the-things* (d/snap conn) (protocols/snapshot knowbase))]
-            (d/transact! conn uuidents)))))
+          :datscript nil
+          (:datomic :wrapped-datomic)
+          (let [uuids (d/uuid-all-the-things* @conn (protocols/snapshot knowbase))]
+            (d/transact! conn uuids)))))
   (stop [component]
         component))
 
