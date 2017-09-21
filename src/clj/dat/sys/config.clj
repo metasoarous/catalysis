@@ -24,8 +24,8 @@
    :datomic-reset-schema {:path [:datomic :reset-db] :parse ?->boolean}})
 
 (def default-server-kind
-;;   :datomic
-  :datascript
+  :datomic
+;;   :datascript
   )
 
 (def defaults
