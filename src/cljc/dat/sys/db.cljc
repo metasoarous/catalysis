@@ -25,11 +25,7 @@
    :db/cardinality {:db/valueType :db.type/ref}
    :db/valueType {:db/valueType :db.type/ref}
    :db/unique {:db/valueType :db.type/ref}
-
-   ;; ???: can :e/type be in just transactions now?
-   :e/type {:db/valueType :db.type/ref}
-   :dat.sync/uuid {:db/unique :db.unique/identity}
-   })
+   :dat.sync/uuid {:db/unique :db.unique/identity}})
 
 (def enum-idents
   [{:db/ident :db.cardinality/many}
@@ -97,7 +93,7 @@
                            (conformity/read-resource "schema.edn")
 ;;                            (-> "schema.edn" io/resource slurp read-string)
                            )]
-    ;; TODO: hot load schemas from file so they get rewritten with a file watch. make a fn 'ensure-conforms-harsh that makes the db entity look like the unique items from file. make sure to add an attr that explains that they cannot be changed from the ui only from file or they will get smashed on reload.
+    ;; TODO: hot load schemas from file so they get rewritten with a file watch. make a fn 'ensure-conforms-harsh that makes the db entity look like the unique items from file. make sure to add an attr that explains that they cannot be changed from the ui only from file or they will get smashed on reload. {:conformity/warn "Conformity manages this entity in *file-name*. If you wish to make permanent changes do so there and not via transactions."}
     (try
       (conformity/ensure-conforms conn schema-data)
       (catch Exception e
