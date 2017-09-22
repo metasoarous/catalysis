@@ -49,7 +49,7 @@
 
                  [io.replikativ/superv.async "0.2.7"]
                  [io.replikativ/kabel "0.2.0"]
-                 [org.onyxplatform/onyx-local-rt "0.10.0.0-beta8"]
+                 [org.onyxplatform/onyx-local-rt "0.11.0.0-alpha5"]
                  [com.rpl/specter "1.0.1"]
 
                  ;;For the free version of Datomic
