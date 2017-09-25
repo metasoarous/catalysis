@@ -24,14 +24,14 @@
    :datomic-reset-schema {:path [:datomic :reset-db] :parse ?->boolean}})
 
 (def default-server-kind
-  :datomic
-;;   :datascript
+;;   :datomic
+  :datascript
   )
 
 (def defaults
   {:server {:port 2358}
    :dat.sync/server {:kind default-server-kind
-;;                      :reset-on-start? true
+                     :reset-on-start? true
                      :url (case default-server-kind
                             :datomic "datomic:mem://base"
                             :datascript "file:resources/persistent-datascript")}})
