@@ -5,6 +5,7 @@
     [leiningen.new.options.views :as views]
     [leiningen.new.options.helpers :as helpers]
     [leiningen.new.options.re-com :as re-com]
+    [leiningen.new.options.checkouts :as checkouts]
     [leiningen.core.main :as main]))
 
 
@@ -55,6 +56,9 @@
   (let [data (template-data name options)]
     ;(check-options options)
     (main/info "Generating datsys project:" name)
-    (apply ->files data (app-files data options))))
+    (apply ->files data (app-files data options))
+    (main/info "Cloning checkouts")
+    (checkouts/clone-git-deps (:ns-name data))))
+    
 
 

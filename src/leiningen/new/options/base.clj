@@ -26,7 +26,6 @@
 
    (src-file "app.clj" data)
    (src-file "config.clj" data)
-   (src-file "datomic.clj" data)
    (src-file "import.clj" data)
    (src-file "ring_handler.clj" data)
    (src-file "run.clj" data)
@@ -34,6 +33,7 @@
    (src-file "system.clj" data)
    (src-file "ws.clj" data)
 
+   (src-file "db.cljc" data)
    (src-file "events.cljc" data)
    (src-file "routes.cljc" data)
    (src-file "utils.cljc" data)

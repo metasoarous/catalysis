@@ -2,7 +2,6 @@
   "System constructor."
   (:require [com.stuartsierra.component :as component]
             [{{ns-name}}.config :as config]
-            [{{ns-name}}.datomic :as datomic]
             [{{ns-name}}.db :as db]
             [{{ns-name}}.server :as server]
             [{{ns-name}}.routes :as routes]
