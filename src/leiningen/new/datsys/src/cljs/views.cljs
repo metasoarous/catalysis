@@ -97,6 +97,6 @@
                                  [?t :db/ident ?t-ident]]
                         (:conn app))]
               (log/info "inside the main function")
-              [todoes-view app]]])
+              [todos-view app]]])
               ;;[:p (str "schema: " (:schema (deref (:conn app))))]
 
