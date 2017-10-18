@@ -28,8 +28,10 @@
    (re-com/assets data)))
 
 
-(defn generate-ports []
-  (let [server-port (+ 3000 (rand-int 10000))]
+(defn generate-ports [options]
+  (let [server-port
+        (or (:server-port options)
+            (+ 3000 (rand-int 10000)))]
     {:server-port server-port
      :figwheel-port (inc server-port)
      :nrepl-port (+ server-port 2)
@@ -38,17 +40,22 @@
 
 (defn template-data [name options]
   (merge
-    (generate-ports)
+    (generate-ports options)
     {:name      name
      :ns-name   (sanitize-ns name)
-     :sanitized (name-to-path name)
-     :checkouts? (helpers/option? "+checkouts" options)}))
+     :sanitized (name-to-path name)}))
+
+(defmethod helpers/parse-opt-val :server-port
+  [_ val]
+  (Long/parseLong val))
    
 
 ;; Think about generating base port
 
 (defn datsys [name & options]
-  (let [data (template-data name options)]
+  (let [options (helpers/parse-opts options)
+        data (template-data name options)]
+    (main/info "options:" (pr-str options))
     ;(check-options options)
     (main/info "Generating datsys project:" name)
     (apply ->files data (app-files data options))

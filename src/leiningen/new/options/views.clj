@@ -10,14 +10,4 @@
 
 
 (defn view-cljs [options data]
-  (cond (and (helpers/option? re-com/option options) (helpers/option? routes/option options))
-        (file "views_recom_routes" data)
-
-        (helpers/option? re-com/option options)
-        (file "views_recom" data)
-
-        (helpers/option? routes/option options)
-        (file "views_routes" data)
-
-        :else
-        (file "views" data)))
+  (file "views" data))
