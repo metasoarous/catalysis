@@ -25,7 +25,7 @@
   (concat
    (base/files data)
    (views/view-cljs options data)
-   (when (helpers/option? re-com/option options) (re-com/assets data))))
+   (re-com/assets data)))
 
 
 (defn generate-ports []
@@ -42,12 +42,7 @@
     {:name      name
      :ns-name   (sanitize-ns name)
      :sanitized (name-to-path name)
-     :re-com?   (helpers/invoke-option "+re-com" options)
-     :checkouts? (helpers/invoke-option "+checkouts" options)
-
-     ;;prep-tasks
-     :init-checkouts (when (helpers/option? "+checkouts" options)
-                       ["datsys" "checkouts" "init"])}))
+     :checkouts? (helpers/option? "+checkouts" options)}))
    
 
 ;; Think about generating base port

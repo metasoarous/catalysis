@@ -20,7 +20,7 @@
    ["resources/schema.edn" (helpers/render "resources/schema.edn" data)]
    ["resources/test-data.edn" (helpers/render "resources/test-data.edn" data)]
 
-   ["resources/public/css/bootstrap.css" (helpers/render "resources/public/css/bootstrap.css" data)]
+   ;["resources/public/css/bootstrap.css" (helpers/render "resources/public/css/bootstrap.css" data)]
    ["resources/public/css/style.css" (helpers/render "resources/public/css/style.css" data)]
 
 
