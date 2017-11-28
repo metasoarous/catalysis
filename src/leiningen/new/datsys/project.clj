@@ -48,6 +48,7 @@
                  [io.replikativ/kabel "0.2.0"]
                  [org.onyxplatform/onyx-spec "0.11.0.2"]
                  [org.onyxplatform/onyx-local-rt "0.11.0.0"]
+                 [onyx-sim "0.1.0"]
                  [com.rpl/specter "1.0.1"]
 
                  ;;For the free version of Datomic

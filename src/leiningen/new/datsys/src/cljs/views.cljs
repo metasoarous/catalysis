@@ -3,6 +3,8 @@
   (:require [dat.view]
             [posh.reagent :as posh]
             [reagent.core :as r]
+            [dat.view.onyx]
+            [onyx.sim.core :as sim]
             [taoensso.timbre :as log]
             [re-com.core :as re-com]))
 
@@ -79,6 +81,15 @@
                    [dat.view/pull-form app (todo-view 1) todo]
                    [dat.view/pull-view app (todo-view 1) todo]])]]))
 
+(defn onyx-todos-view [{:keys [conn]}]
+  (let [debug true]
+    (if debug
+      [sim/sim-selector conn]
+      [sim/render-segment
+       {:dat.sync.db/conn conn
+        :onyx.sim/sim [:onyx/name :dat.view/sim]}
+       {:dat.view/route :dat.view/todos}])))
+
 
 ;; ## Main
 
@@ -97,6 +108,8 @@
                                  [?t :db/ident ?t-ident]]
                         (:conn app))]
               (log/info "inside the main function")
-              [todos-view app]]])
+;;               [todos-view app]
+              [onyx-todos-view app]
+              ]])
               ;;[:p (str "schema: " (:schema (deref (:conn app))))]
 
