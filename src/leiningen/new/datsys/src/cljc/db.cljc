@@ -75,8 +75,8 @@
     :db/valueType :db.type/ref}
    {:db/ident :db.part/db}
    {:db/ident :db.part/user}
-   {:db/ident :db.part/tx}
-   ])
+   {:db/ident :db.part/tx}])
+
 
 (defn ensure-schema-datascript!
   [conn]
@@ -86,26 +86,26 @@
       (d/transact! conn txs))))
 
 #?(:clj
-(defn ensure-schema!
-  [conn]
+   (defn ensure-schema!
+     [conn]
   ;; The schema is in `resources/schema.edn`; Note that we make requirements in that schema about having Datview schema loaded
-  (let [schema-data (merge dat.view/base-schema
-                           (conformity/read-resource "schema.edn")
+     (let [schema-data (merge dat.view/base-schema
+                              (conformity/read-resource "schema.edn"))]
 ;;                            (-> "schema.edn" io/resource slurp read-string)
-                           )]
+
     ;; TODO: hot load schemas from file so they get rewritten with a file watch. make a fn 'ensure-conforms-harsh that makes the db entity look like the unique items from file. make sure to add an attr that explains that they cannot be changed from the ui only from file or they will get smashed on reload. {:conformity/warn "Conformity manages this entity in *file-name*. If you wish to make permanent changes do so there and not via transactions."}
-    (try
-      (conformity/ensure-conforms conn schema-data)
-      (catch Exception e
-        (.printStackTrace e))))))
+       (try
+         (conformity/ensure-conforms conn schema-data)
+         (catch Exception e
+           (.printStackTrace e))))))
 
 #?(:clj
-(defn db-persister [url]
+   (defn db-persister [url]
 ;;   (log/debug "nippy freezing")
-  (fn [{:as report :keys [db-after]}]
-    (with-open [out (clojure.java.io/output-stream url)]
-        (nippy/freeze-to-out! (DataOutputStream. out) {:datoms (ds/datoms db-after :eavt)
-                                                       :schema (:schema db-after)})))))
+     (fn [{:as report :keys [db-after]}]
+       (with-open [out (clojure.java.io/output-stream url)]
+           (nippy/freeze-to-out! (DataOutputStream. out) {:datoms (ds/datoms db-after :eavt)
+                                                          :schema (:schema db-after)})))))
 
 (defn create-conn! [kind url reset-on-start?]
   (case kind
