@@ -24,7 +24,6 @@
    ["resources/public/css/style.css" (helpers/render "resources/public/css/style.css" data)]
 
 
-   (src-file "app.clj" data)
    (src-file "config.clj" data)
    (src-file "import.clj" data)
    (src-file "ring_handler.clj" data)
