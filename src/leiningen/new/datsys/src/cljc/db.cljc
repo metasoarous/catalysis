@@ -8,6 +8,9 @@
             [datascript.core :as ds]
             [datascript.db]
             [dat.view]
+            #?(:cljs [dat.view.onyx])
+            #?(:cljs [onyx.sim.event])
+            #?(:cljs [onyx.sim.core :as sim])
             [dat.spec.protocols :as protocols]
             [{{ns-name}}.utils :refer [deep-merge cat-into]]
             #?(:clj [taoensso.nippy :as nippy])
@@ -16,7 +19,7 @@
             [io.rkn.conformity.core :as conformity]
             #?(:clj [datomic.api :as dapi])
             [com.stuartsierra.component :as component])
-            
+
   #?(:clj
       (:import [java.io DataInputStream DataOutputStream])))
 
@@ -156,6 +159,20 @@
           #?(:clj (dat.sync/go-tx-report! (dapi/tx-report-queue conn) tx-report-chan))))
 
       #?(:clj (ensure-schema! conn))
+
+      ;; Onyx-sim
+      #?(:cljs
+          (do
+            (log/info "initializing dat.view.onyx...")
+            ;; TODO: convert to conformity style.
+            ;; TODO: sort out datomic compatability.
+            ;; TODO: make filter for tranactions that should NOT go to the server.
+            (d/transact! conn sim/schema-idents)
+            (d/transact! conn sim/base-ui)
+            (onyx.sim.event/sim! conn)
+            (d/transact! conn sim/examples)
+            (d/transact! conn [(dat.view.onyx/make-sim conn)])
+            (d/transact! conn dat.view.onyx/examples)))
 
       (assoc component
         :kind kind
